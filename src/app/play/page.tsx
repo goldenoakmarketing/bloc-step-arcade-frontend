@@ -1,25 +1,39 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAccount } from 'wagmi'
 import { CRTScreen } from '@/components/ui/CRTScreen'
 import { ArcadeButton } from '@/components/ui/ArcadeButton'
 import { PixelBorder } from '@/components/ui/PixelBorder'
 import { ConnectButton } from '@/components/wallet/ConnectButton'
+import {
+  usePlayerBalance,
+  useActiveSession,
+  useStartSession,
+  useEndSession,
+  useConsumeTime,
+} from '@/hooks/useApi'
 
 type GameState = 'idle' | 'playing' | 'paused' | 'gameover'
 
 export default function PlayPage() {
-  const { isConnected, address } = useAccount()
+  const { isConnected } = useAccount()
   const [gameState, setGameState] = useState<GameState>('idle')
   const [score, setScore] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(60) // seconds
+  const [timeLeft, setTimeLeft] = useState(60)
   const [combo, setCombo] = useState(0)
   const [highScore, setHighScore] = useState(0)
+  const sessionIdRef = useRef<string | null>(null)
 
-  // Simulated time balance (in real app, fetch from contract)
-  const [timeBalance, setTimeBalance] = useState(300)
+  // API hooks
+  const { data: balance, refetch: refetchBalance } = usePlayerBalance()
+  const { data: activeSession } = useActiveSession()
+  const startSession = useStartSession()
+  const endSession = useEndSession()
+  const consumeTime = useConsumeTime()
+
+  const timeBalance = balance?.timeBalanceSeconds ?? 0
 
   // Game timer
   useEffect(() => {
@@ -28,7 +42,7 @@ export default function PlayPage() {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          setGameState('gameover')
+          endGame()
           return 0
         }
         return prev - 1
@@ -37,6 +51,22 @@ export default function PlayPage() {
 
     return () => clearInterval(timer)
   }, [gameState])
+
+  // Consume time on-chain every 10 seconds of gameplay
+  useEffect(() => {
+    if (gameState !== 'playing' || !sessionIdRef.current) return
+
+    const consumeInterval = setInterval(() => {
+      if (sessionIdRef.current) {
+        consumeTime.mutate({
+          sessionId: sessionIdRef.current,
+          seconds: 10,
+        })
+      }
+    }, 10_000) // Every 10 seconds
+
+    return () => clearInterval(consumeInterval)
+  }, [gameState, consumeTime])
 
   // Handle tap/click during game
   const handleGameTap = useCallback(() => {
@@ -53,22 +83,42 @@ export default function PlayPage() {
     }, 2000)
   }, [gameState, combo])
 
-  const startGame = () => {
+  const startGame = async () => {
     if (timeBalance < 60) {
       alert('Not enough time! Purchase more arcade time.')
       return
     }
-    setScore(0)
-    setCombo(0)
-    setTimeLeft(60)
-    setGameState('playing')
-    setTimeBalance((prev) => prev - 60)
+
+    try {
+      // Start a game session via API
+      const session = await startSession.mutateAsync()
+      sessionIdRef.current = session.id
+
+      setScore(0)
+      setCombo(0)
+      setTimeLeft(60)
+      setGameState('playing')
+    } catch (error) {
+      console.error('Failed to start session:', error)
+      alert('Failed to start game session. Please try again.')
+    }
   }
 
-  const endGame = () => {
+  const endGame = async () => {
     setGameState('gameover')
     if (score > highScore) {
       setHighScore(score)
+    }
+
+    // End the session via API
+    if (sessionIdRef.current) {
+      try {
+        await endSession.mutateAsync(sessionIdRef.current)
+        sessionIdRef.current = null
+        refetchBalance()
+      } catch (error) {
+        console.error('Failed to end session:', error)
+      }
     }
   }
 

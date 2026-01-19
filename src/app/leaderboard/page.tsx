@@ -2,49 +2,13 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useAccount } from 'wagmi'
 import { CRTScreen } from '@/components/ui/CRTScreen'
 import { PixelBorder } from '@/components/ui/PixelBorder'
+import { useLeaderboards, usePlayer } from '@/hooks/useApi'
 import { clsx } from 'clsx'
 
 type LeaderboardType = 'yeet' | 'staking' | 'time'
-
-interface LeaderboardEntry {
-  rank: number
-  address: string
-  username?: string
-  score: string
-  isCurrentUser?: boolean
-}
-
-// Mock data - replace with API calls
-const mockLeaderboards: Record<LeaderboardType, LeaderboardEntry[]> = {
-  yeet: [
-    { rank: 1, address: '0x1234...5678', username: 'yeetmaster', score: '1,000,000' },
-    { rank: 2, address: '0xabcd...efgh', username: 'blazer420', score: '750,000' },
-    { rank: 3, address: '0x9876...5432', username: 'cryptokid', score: '500,000' },
-    { rank: 4, address: '0xdead...beef', score: '250,000' },
-    { rank: 5, address: '0xcafe...babe', username: 'moonboy', score: '100,000' },
-    { rank: 6, address: '0x1111...2222', score: '75,000' },
-    { rank: 7, address: '0x3333...4444', score: '50,000' },
-    { rank: 8, address: '0x5555...6666', username: 'stacker', score: '25,000' },
-    { rank: 9, address: '0x7777...8888', score: '10,000' },
-    { rank: 10, address: '0x9999...0000', score: '5,000' },
-  ],
-  staking: [
-    { rank: 1, address: '0xabcd...efgh', username: 'whale', score: '5,000,000' },
-    { rank: 2, address: '0x1234...5678', username: 'hodler', score: '2,500,000' },
-    { rank: 3, address: '0x9876...5432', score: '1,000,000' },
-    { rank: 4, address: '0xdead...beef', username: 'diamond', score: '500,000' },
-    { rank: 5, address: '0xcafe...babe', score: '250,000' },
-  ],
-  time: [
-    { rank: 1, address: '0x9876...5432', username: 'gamer1', score: '48:32:15' },
-    { rank: 2, address: '0x1234...5678', score: '36:15:42' },
-    { rank: 3, address: '0xabcd...efgh', username: 'nolife', score: '24:00:00' },
-    { rank: 4, address: '0xdead...beef', score: '12:30:00' },
-    { rank: 5, address: '0xcafe...babe', score: '6:45:30' },
-  ],
-}
 
 const leaderboardTabs: { id: LeaderboardType; label: string; icon: string }[] = [
   { id: 'yeet', label: 'YEET', icon: '🚀' },
@@ -54,7 +18,19 @@ const leaderboardTabs: { id: LeaderboardType; label: string; icon: string }[] = 
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('yeet')
-  const entries = mockLeaderboards[activeTab]
+  const { address } = useAccount()
+  const { yeet, staking, time, isLoading } = useLeaderboards(10)
+  const { data: player } = usePlayer()
+
+  const leaderboardData = { yeet, staking, time }
+  const entries = leaderboardData[activeTab].map((entry, index) => ({
+    rank: entry.rank || index + 1,
+    address: `${entry.walletAddress.slice(0, 6)}...${entry.walletAddress.slice(-4)}`,
+    fullAddress: entry.walletAddress,
+    username: entry.farcasterUsername,
+    score: entry.scoreFormatted || entry.score,
+    isCurrentUser: entry.walletAddress.toLowerCase() === address?.toLowerCase(),
+  }))
 
   const getRankColor = (rank: number) => {
     switch (rank) {
@@ -180,8 +156,24 @@ export default function LeaderboardPage() {
               ))}
             </div>
 
+            {/* Loading state */}
+            {isLoading && (
+              <div className="text-center py-12">
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="text-4xl inline-block"
+                >
+                  🎮
+                </motion.span>
+                <p className="font-arcade text-gray-500 mt-4">
+                  Loading scores...
+                </p>
+              </div>
+            )}
+
             {/* Empty state */}
-            {entries.length === 0 && (
+            {!isLoading && entries.length === 0 && (
               <div className="text-center py-12">
                 <span className="text-4xl">🏆</span>
                 <p className="font-arcade text-gray-500 mt-4">
@@ -193,29 +185,41 @@ export default function LeaderboardPage() {
         </CRTScreen>
 
         {/* Your Rank Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6"
-        >
-          <PixelBorder color="cyan" className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-pixel text-[10px] text-gray-500">YOUR RANK</p>
-                <p className="font-pixel text-lg text-neon-cyan">
-                  #42
-                </p>
+        {address && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6"
+          >
+            <PixelBorder color="cyan" className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-pixel text-[10px] text-gray-500">YOUR RANK</p>
+                  <p className="font-pixel text-lg text-neon-cyan">
+                    {entries.find(e => e.isCurrentUser)?.rank
+                      ? `#${entries.find(e => e.isCurrentUser)?.rank}`
+                      : '--'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-pixel text-[10px] text-gray-500">
+                    {activeTab === 'yeet' ? 'TOTAL YEETED' : activeTab === 'staking' ? 'STAKED' : 'TIME PLAYED'}
+                  </p>
+                  <p className="font-pixel text-lg text-neon-green">
+                    {activeTab === 'yeet' && player?.stats.totalYeeted
+                      ? Number(player.stats.totalYeeted).toLocaleString()
+                      : activeTab === 'staking' && player?.cachedStakedBalance
+                      ? Number(player.cachedStakedBalance).toLocaleString()
+                      : activeTab === 'time' && player?.stats.totalTimeConsumed
+                      ? player.stats.totalTimeConsumed
+                      : '--'}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-pixel text-[10px] text-gray-500">YOUR SCORE</p>
-                <p className="font-pixel text-lg text-neon-green">
-                  1,337
-                </p>
-              </div>
-            </div>
-          </PixelBorder>
-        </motion.div>
+            </PixelBorder>
+          </motion.div>
+        )}
       </div>
     </div>
   )

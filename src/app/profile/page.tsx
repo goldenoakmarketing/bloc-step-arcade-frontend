@@ -6,21 +6,27 @@ import { useAccount } from 'wagmi'
 import { CRTScreen } from '@/components/ui/CRTScreen'
 import { ArcadeButton } from '@/components/ui/ArcadeButton'
 import { PixelBorder } from '@/components/ui/PixelBorder'
-import { NeonText } from '@/components/ui/NeonText'
 import { ConnectButton } from '@/components/wallet/ConnectButton'
+import { usePlayer, usePlayerBalance } from '@/hooks/useApi'
 
 export default function ProfilePage() {
   const { isConnected, address } = useAccount()
   const [purchaseAmount, setPurchaseAmount] = useState(60)
+  const { data: player, isLoading: playerLoading } = usePlayer()
+  const { data: balance } = usePlayerBalance()
 
-  // Mock data - replace with real data
+  // Use real data from API, with fallbacks
   const stats = {
-    timeBalance: 300,
-    stakedBalance: '10,000',
-    totalYeeted: '50,000',
-    gamesPlayed: 42,
-    highScore: 999999,
-    rank: 42,
+    timeBalance: balance?.timeBalanceSeconds ?? 0,
+    stakedBalance: player?.cachedStakedBalance
+      ? Number(player.cachedStakedBalance).toLocaleString()
+      : '0',
+    totalYeeted: player?.stats.totalYeeted
+      ? Number(player.stats.totalYeeted).toLocaleString()
+      : '0',
+    gamesPlayed: 0, // TODO: Add to backend
+    highScore: 0, // TODO: Add to backend
+    rank: 0, // TODO: Fetch from leaderboard
   }
 
   if (!isConnected) {
