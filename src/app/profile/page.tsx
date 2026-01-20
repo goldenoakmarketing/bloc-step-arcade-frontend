@@ -34,8 +34,8 @@ export default function ProfilePage() {
     return `${mins}m`
   }
 
-  // Calculate donation (1 in 6 goes to pool)
-  const getDonationAmount = (quarters: number) => Math.floor(quarters / 6)
+  // Calculate donation (1 in 8 goes to pool)
+  const getDonationAmount = (quarters: number) => Math.floor(quarters / 8)
 
   const handleClaim = (found: number) => {
     setQuarterBalance(prev => prev + found)
@@ -199,7 +199,7 @@ export default function ProfilePage() {
                 {donationAmount > 0 && (
                   <div className="flex justify-between mb-1 text-yellow-500">
                     <span>Donated to pool:</span>
-                    <span>{donationAmount}Q (1 in 6)</span>
+                    <span>{donationAmount}Q (1 in 8)</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold border-t border-zinc-700 pt-1 mt-1">
