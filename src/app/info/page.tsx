@@ -171,7 +171,7 @@ export default function InfoPage() {
             all powered by the simple, familiar concept of an arcade quarter.
           </p>
           <p className="text-sm text-muted leading-relaxed">
-            Play games. Tip creators. Support local businesses. That's the future we're building.
+            Play games. Tip creators. Transact locally. That's the future we're building, one bloc step at a time.
           </p>
         </div>
 
