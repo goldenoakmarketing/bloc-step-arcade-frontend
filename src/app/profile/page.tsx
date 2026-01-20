@@ -1,41 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { useAccount } from 'wagmi'
-import { ConnectButton } from '@/components/wallet/ConnectButton'
-import { usePlayer, usePlayerBalance } from '@/hooks/useApi'
 
 export default function ProfilePage() {
-  const { isConnected, address } = useAccount()
   const [purchaseAmount, setPurchaseAmount] = useState(60)
-  const { data: player } = usePlayer()
-  const { data: balance } = usePlayerBalance()
+
+  // Mock data for development
+  const timeBalance = 300
+  const stakedBalance = '10,000'
+  const totalYeeted = '50,000'
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  const timeBalance = balance?.timeBalanceSeconds ?? 0
-  const stakedBalance = player?.cachedStakedBalance
-    ? Number(player.cachedStakedBalance).toLocaleString()
-    : '0'
-  const totalYeeted = player?.stats.totalYeeted
-    ? Number(player.stats.totalYeeted).toLocaleString()
-    : '0'
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center max-w-sm w-full">
-          <div className="text-5xl mb-4">👤</div>
-          <h2 className="text-xl font-bold mb-2">Connect Wallet</h2>
-          <p className="text-muted mb-6">View your profile</p>
-          <ConnectButton />
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -46,10 +24,8 @@ export default function ProfilePage() {
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] mx-auto mb-4 flex items-center justify-center text-2xl">
             🎮
           </div>
-          <h1 className="text-xl font-bold">
-            {address?.slice(0, 6)}...{address?.slice(-4)}
-          </h1>
-          <p className="text-muted text-sm">Player</p>
+          <h1 className="text-xl font-bold">Guest Player</h1>
+          <p className="text-muted text-sm">Connect wallet to save progress</p>
         </div>
 
         {/* Time Balance */}

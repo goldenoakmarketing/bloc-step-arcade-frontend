@@ -1,8 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useAccount } from 'wagmi'
-import { useLeaderboards, usePlayer } from '@/hooks/useApi'
 
 type LeaderboardType = 'yeet' | 'staking' | 'time'
 
@@ -12,20 +10,30 @@ const tabs: { id: LeaderboardType; label: string }[] = [
   { id: 'time', label: 'Time' },
 ]
 
+// Mock data for development
+const mockData = {
+  yeet: [
+    { rank: 1, address: '0x1234...5678', username: 'yeetmaster', score: '1,000,000' },
+    { rank: 2, address: '0xabcd...efgh', username: 'blazer', score: '750,000' },
+    { rank: 3, address: '0x9876...5432', username: null, score: '500,000' },
+    { rank: 4, address: '0xdead...beef', username: 'cryptokid', score: '250,000' },
+    { rank: 5, address: '0xcafe...babe', username: null, score: '100,000' },
+  ],
+  staking: [
+    { rank: 1, address: '0xabcd...efgh', username: 'whale', score: '5,000,000' },
+    { rank: 2, address: '0x1234...5678', username: 'hodler', score: '2,500,000' },
+    { rank: 3, address: '0x9876...5432', username: null, score: '1,000,000' },
+  ],
+  time: [
+    { rank: 1, address: '0x9876...5432', username: 'gamer1', score: '48:32:15' },
+    { rank: 2, address: '0x1234...5678', username: null, score: '36:15:42' },
+    { rank: 3, address: '0xabcd...efgh', username: 'nolife', score: '24:00:00' },
+  ],
+}
+
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('yeet')
-  const { address } = useAccount()
-  const { yeet, staking, time, isLoading } = useLeaderboards(10)
-  const { data: player } = usePlayer()
-
-  const data = { yeet, staking, time }
-  const entries = data[activeTab].map((entry, index) => ({
-    rank: entry.rank || index + 1,
-    address: `${entry.walletAddress.slice(0, 6)}...${entry.walletAddress.slice(-4)}`,
-    username: entry.farcasterUsername,
-    score: entry.scoreFormatted || entry.score,
-    isCurrentUser: entry.walletAddress.toLowerCase() === address?.toLowerCase(),
-  }))
+  const entries = mockData[activeTab]
 
   const getRankDisplay = (rank: number) => {
     if (rank === 1) return '🥇'
@@ -58,70 +66,39 @@ export default function LeaderboardPage() {
 
         {/* List */}
         <div className="card">
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="spinner mx-auto mb-3"></div>
-              <p className="text-muted text-sm">Loading...</p>
-            </div>
-          ) : entries.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-3">🏆</div>
-              <p className="text-muted">No scores yet</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[#27272a]">
-              {entries.map((entry) => (
-                <div
-                  key={entry.address}
-                  className={`leaderboard-row ${entry.isCurrentUser ? 'bg-[#8b5cf6]/10' : ''}`}
-                >
-                  <div className="w-12 text-lg">
-                    {getRankDisplay(entry.rank)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    {entry.username && (
-                      <div className="font-medium truncate">@{entry.username}</div>
-                    )}
-                    <div className="text-sm text-muted truncate">{entry.address}</div>
-                  </div>
-                  <div className="text-right font-bold">
-                    {entry.score}
-                  </div>
+          <div className="divide-y divide-[#27272a]">
+            {entries.map((entry) => (
+              <div key={entry.address} className="leaderboard-row">
+                <div className="w-12 text-lg">
+                  {getRankDisplay(entry.rank)}
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="flex-1 min-w-0">
+                  {entry.username && (
+                    <div className="font-medium truncate">@{entry.username}</div>
+                  )}
+                  <div className="text-sm text-muted truncate">{entry.address}</div>
+                </div>
+                <div className="text-right font-bold">
+                  {entry.score}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Your Stats */}
-        {address && (
-          <div className="card mt-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="text-xs text-muted">Your Rank</div>
-                <div className="text-xl font-bold">
-                  {entries.find(e => e.isCurrentUser)?.rank
-                    ? `#${entries.find(e => e.isCurrentUser)?.rank}`
-                    : '--'}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-muted">
-                  {activeTab === 'yeet' ? 'Total Yeeted' : activeTab === 'staking' ? 'Staked' : 'Time Played'}
-                </div>
-                <div className="text-xl font-bold text-gradient">
-                  {activeTab === 'yeet' && player?.stats.totalYeeted
-                    ? Number(player.stats.totalYeeted).toLocaleString()
-                    : activeTab === 'staking' && player?.cachedStakedBalance
-                    ? Number(player.cachedStakedBalance).toLocaleString()
-                    : activeTab === 'time' && player?.stats.totalTimeConsumed
-                    ? player.stats.totalTimeConsumed
-                    : '--'}
-                </div>
-              </div>
+        {/* Your Stats - mock */}
+        <div className="card mt-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-xs text-muted">Your Rank</div>
+              <div className="text-xl font-bold">--</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-muted">Your Score</div>
+              <div className="text-xl font-bold text-gradient">--</div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

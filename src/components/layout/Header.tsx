@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ConnectButton } from '@/components/wallet/ConnectButton'
+// import { ConnectButton } from '@/components/wallet/ConnectButton'
 
 const navItems = [
   { href: '/', label: 'Home' },
@@ -37,7 +37,7 @@ export function Header() {
           ))}
         </nav>
 
-        <ConnectButton />
+{/* <ConnectButton /> - disabled for development */}
       </div>
 
       {/* Mobile nav */}

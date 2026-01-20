@@ -1,33 +1,19 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useAccount } from 'wagmi'
-import { ConnectButton } from '@/components/wallet/ConnectButton'
-import {
-  usePlayerBalance,
-  useStartSession,
-  useEndSession,
-  useConsumeTime,
-} from '@/hooks/useApi'
 
 type GameState = 'idle' | 'playing' | 'paused' | 'gameover'
 
 export default function PlayPage() {
-  const { isConnected } = useAccount()
   const [gameState, setGameState] = useState<GameState>('idle')
   const [score, setScore] = useState(0)
   const [timeLeft, setTimeLeft] = useState(60)
   const [combo, setCombo] = useState(0)
   const [highScore, setHighScore] = useState(0)
-  const sessionIdRef = useRef<string | null>(null)
   const comboTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const { data: balance, refetch: refetchBalance } = usePlayerBalance()
-  const startSession = useStartSession()
-  const endSession = useEndSession()
-  const consumeTime = useConsumeTime()
-
-  const timeBalance = balance?.timeBalanceSeconds ?? 0
+  // Mock time balance for development
+  const [timeBalance, setTimeBalance] = useState(300)
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -52,19 +38,6 @@ export default function PlayPage() {
     return () => clearInterval(timer)
   }, [gameState])
 
-  // Consume time every 10 seconds
-  useEffect(() => {
-    if (gameState !== 'playing' || !sessionIdRef.current) return
-
-    const interval = setInterval(() => {
-      if (sessionIdRef.current) {
-        consumeTime.mutate({ sessionId: sessionIdRef.current, seconds: 10 })
-      }
-    }, 10_000)
-
-    return () => clearInterval(interval)
-  }, [gameState, consumeTime])
-
   const handleTap = useCallback(() => {
     if (gameState !== 'playing') return
 
@@ -76,51 +49,22 @@ export default function PlayPage() {
     comboTimeoutRef.current = setTimeout(() => setCombo(0), 2000)
   }, [gameState, combo])
 
-  const startGame = async () => {
+  const startGame = () => {
     if (timeBalance < 60) {
       alert('Not enough time! Purchase more arcade time.')
       return
     }
 
-    try {
-      const session = await startSession.mutateAsync()
-      sessionIdRef.current = session.id
-      setScore(0)
-      setCombo(0)
-      setTimeLeft(60)
-      setGameState('playing')
-    } catch (error) {
-      console.error('Failed to start session:', error)
-      alert('Failed to start game. Please try again.')
-    }
+    setTimeBalance((prev) => prev - 60)
+    setScore(0)
+    setCombo(0)
+    setTimeLeft(60)
+    setGameState('playing')
   }
 
-  const endGame = async () => {
+  const endGame = () => {
     setGameState('gameover')
     if (score > highScore) setHighScore(score)
-
-    if (sessionIdRef.current) {
-      try {
-        await endSession.mutateAsync(sessionIdRef.current)
-        sessionIdRef.current = null
-        refetchBalance()
-      } catch (error) {
-        console.error('Failed to end session:', error)
-      }
-    }
-  }
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="card text-center max-w-sm w-full">
-          <div className="text-5xl mb-4">🎮</div>
-          <h2 className="text-xl font-bold mb-2">Connect Wallet</h2>
-          <p className="text-muted mb-6">Connect to start playing</p>
-          <ConnectButton />
-        </div>
-      </div>
-    )
   }
 
   return (

@@ -1,11 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useAccount } from 'wagmi'
-import { ConnectButton } from '@/components/wallet/ConnectButton'
 
 export default function HomePage() {
-  const { isConnected } = useAccount()
 
   return (
     <div className="min-h-screen px-4 py-12">
@@ -22,30 +19,23 @@ export default function HomePage() {
 
         {/* Main Card */}
         <div className="card mb-8">
-          {!isConnected ? (
-            <div className="text-center py-8">
-              <p className="text-lg mb-6">Connect your wallet to start playing</p>
-              <ConnectButton />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Link href="/play">
-                <button className="btn btn-primary btn-lg btn-full">
-                  Start Playing
-                </button>
-              </Link>
-              <Link href="/leaderboard">
-                <button className="btn btn-secondary btn-full">
-                  View Leaderboard
-                </button>
-              </Link>
-              <Link href="/profile">
-                <button className="btn btn-secondary btn-full">
-                  My Profile
-                </button>
-              </Link>
-            </div>
-          )}
+          <div className="space-y-4">
+            <Link href="/play">
+              <button className="btn btn-primary btn-lg btn-full">
+                Start Playing
+              </button>
+            </Link>
+            <Link href="/leaderboard">
+              <button className="btn btn-secondary btn-full">
+                View Leaderboard
+              </button>
+            </Link>
+            <Link href="/profile">
+              <button className="btn btn-secondary btn-full">
+                My Profile
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Features */}
