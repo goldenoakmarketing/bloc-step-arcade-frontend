@@ -1,50 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { useAccount } from 'wagmi'
-import { CRTScreen } from '@/components/ui/CRTScreen'
-import { ArcadeButton } from '@/components/ui/ArcadeButton'
-import { PixelBorder } from '@/components/ui/PixelBorder'
 import { ConnectButton } from '@/components/wallet/ConnectButton'
 import { usePlayer, usePlayerBalance } from '@/hooks/useApi'
 
 export default function ProfilePage() {
   const { isConnected, address } = useAccount()
   const [purchaseAmount, setPurchaseAmount] = useState(60)
-  const { data: player, isLoading: playerLoading } = usePlayer()
+  const { data: player } = usePlayer()
   const { data: balance } = usePlayerBalance()
-
-  // Use real data from API, with fallbacks
-  const stats = {
-    timeBalance: balance?.timeBalanceSeconds ?? 0,
-    stakedBalance: player?.cachedStakedBalance
-      ? Number(player.cachedStakedBalance).toLocaleString()
-      : '0',
-    totalYeeted: player?.stats.totalYeeted
-      ? Number(player.stats.totalYeeted).toLocaleString()
-      : '0',
-    gamesPlayed: 0, // TODO: Add to backend
-    highScore: 0, // TODO: Add to backend
-    rank: 0, // TODO: Fetch from leaderboard
-  }
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <PixelBorder color="pink" className="p-8 text-center max-w-md">
-          <span className="text-5xl">👤</span>
-          <h2 className="font-pixel text-lg text-neon-pink mt-4">
-            CONNECT WALLET
-          </h2>
-          <p className="font-arcade text-gray-400 mt-2 mb-6">
-            View your arcade profile
-          </p>
-          <ConnectButton />
-        </PixelBorder>
-      </div>
-    )
-  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -52,139 +17,103 @@ export default function ProfilePage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const timeBalance = balance?.timeBalanceSeconds ?? 0
+  const stakedBalance = player?.cachedStakedBalance
+    ? Number(player.cachedStakedBalance).toLocaleString()
+    : '0'
+  const totalYeeted = player?.stats.totalYeeted
+    ? Number(player.stats.totalYeeted).toLocaleString()
+    : '0'
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="card text-center max-w-sm w-full">
+          <div className="text-5xl mb-4">👤</div>
+          <h2 className="text-xl font-bold mb-2">Connect Wallet</h2>
+          <p className="text-muted mb-6">View your profile</p>
+          <ConnectButton />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Profile Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="inline-block p-4 rounded-full bg-arcade-dark border-4 border-neon-pink mb-4"
-               style={{ boxShadow: '0 0 20px rgba(255, 0, 255, 0.5)' }}>
-            <span className="text-5xl">🎮</span>
+      <div className="max-w-lg mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] mx-auto mb-4 flex items-center justify-center text-2xl">
+            🎮
           </div>
-
-          <h1 className="font-pixel text-sm text-white mb-2">
+          <h1 className="text-xl font-bold">
             {address?.slice(0, 6)}...{address?.slice(-4)}
           </h1>
+          <p className="text-muted text-sm">Player</p>
+        </div>
 
-          <p className="font-arcade text-gray-500">
-            Player since Jan 2024
-          </p>
-        </motion.div>
-
-        {/* Time Balance Card */}
-        <CRTScreen className="p-6 mb-6">
-          <div className="text-center">
-            <p className="font-pixel text-xs text-gray-500 mb-2">
-              ARCADE TIME BALANCE
-            </p>
-            <p className="font-pixel text-4xl text-neon-cyan neon-text-cyan">
-              {formatTime(stats.timeBalance)}
-            </p>
-
-            {/* Purchase Time */}
-            <div className="mt-6 pt-6 border-t border-arcade-purple/30">
-              <p className="font-arcade text-sm text-gray-400 mb-4">
-                Purchase more time with $BLOC
-              </p>
-
-              <div className="flex justify-center gap-2 mb-4">
-                {[60, 300, 600].map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setPurchaseAmount(amount)}
-                    className={`px-4 py-2 font-pixel text-xs border-2 transition-all
-                      ${purchaseAmount === amount
-                        ? 'border-neon-cyan bg-arcade-purple/30 text-neon-cyan'
-                        : 'border-gray-700 text-gray-500 hover:border-gray-500'
-                      }`}
-                  >
-                    {formatTime(amount)}
-                  </button>
-                ))}
-              </div>
-
-              <ArcadeButton variant="success" fullWidth>
-                BUY {formatTime(purchaseAmount)} TIME
-              </ArcadeButton>
-            </div>
+        {/* Time Balance */}
+        <div className="card mb-4">
+          <div className="text-center mb-6">
+            <div className="text-sm text-muted mb-1">Time Balance</div>
+            <div className="text-4xl font-bold text-gradient">{formatTime(timeBalance)}</div>
           </div>
-        </CRTScreen>
+
+          <div className="border-t border-[#27272a] pt-4">
+            <div className="text-sm text-muted mb-3">Purchase more time</div>
+            <div className="flex gap-2 mb-4">
+              {[60, 300, 600].map((amount) => (
+                <button
+                  key={amount}
+                  onClick={() => setPurchaseAmount(amount)}
+                  className={purchaseAmount === amount ? 'tab tab-active flex-1' : 'tab flex-1'}
+                >
+                  {formatTime(amount)}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-success btn-full">
+              Buy {formatTime(purchaseAmount)}
+            </button>
+          </div>
+        </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <PixelBorder color="green" className="p-4 text-center">
-            <p className="font-pixel text-[10px] text-gray-500">STAKED</p>
-            <p className="font-pixel text-lg text-neon-green">{stats.stakedBalance}</p>
-            <p className="font-arcade text-xs text-gray-600">$BLOC</p>
-          </PixelBorder>
-
-          <PixelBorder color="pink" className="p-4 text-center">
-            <p className="font-pixel text-[10px] text-gray-500">YEETED</p>
-            <p className="font-pixel text-lg text-neon-pink">{stats.totalYeeted}</p>
-            <p className="font-arcade text-xs text-gray-600">$BLOC</p>
-          </PixelBorder>
-
-          <PixelBorder color="cyan" className="p-4 text-center">
-            <p className="font-pixel text-[10px] text-gray-500">GAMES</p>
-            <p className="font-pixel text-lg text-neon-cyan">{stats.gamesPlayed}</p>
-            <p className="font-arcade text-xs text-gray-600">played</p>
-          </PixelBorder>
-
-          <PixelBorder color="yellow" className="p-4 text-center">
-            <p className="font-pixel text-[10px] text-gray-500">HI-SCORE</p>
-            <p className="font-pixel text-lg text-neon-yellow">{stats.highScore}</p>
-            <p className="font-arcade text-xs text-gray-600">points</p>
-          </PixelBorder>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="space-y-4">
-          <PixelBorder color="green" className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-pixel text-sm text-neon-green">STAKE $BLOC</p>
-                <p className="font-arcade text-xs text-gray-500">Earn rewards</p>
-              </div>
-              <ArcadeButton variant="success" size="sm">
-                STAKE
-              </ArcadeButton>
-            </div>
-          </PixelBorder>
-
-          <PixelBorder color="pink" className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-pixel text-sm text-neon-pink">YEET $BLOC</p>
-                <p className="font-arcade text-xs text-gray-500">Burn for glory</p>
-              </div>
-              <ArcadeButton variant="danger" size="sm">
-                YEET
-              </ArcadeButton>
-            </div>
-          </PixelBorder>
-        </div>
-
-        {/* Rank Badge */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-8 text-center"
-        >
-          <div className="inline-block p-6 bg-arcade-dark rounded-lg border-2 border-arcade-purple">
-            <p className="font-pixel text-xs text-gray-500">GLOBAL RANK</p>
-            <p className="font-pixel text-4xl text-neon-yellow neon-text-yellow mt-2">
-              #{stats.rank}
-            </p>
-            <p className="font-arcade text-sm text-gray-500 mt-2">
-              Top 5%
-            </p>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="stat-card">
+            <div className="stat-label">Staked</div>
+            <div className="stat-value">{stakedBalance}</div>
+            <div className="text-xs text-muted">$BLOC</div>
           </div>
-        </motion.div>
+          <div className="stat-card">
+            <div className="stat-label">Yeeted</div>
+            <div className="stat-value">{totalYeeted}</div>
+            <div className="text-xs text-muted">$BLOC</div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-3">
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Stake $BLOC</div>
+                <div className="text-sm text-muted">Earn rewards</div>
+              </div>
+              <button className="btn btn-success">Stake</button>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Yeet $BLOC</div>
+                <div className="text-sm text-muted">Burn for glory</div>
+              </div>
+              <button className="btn btn-primary">Yeet</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

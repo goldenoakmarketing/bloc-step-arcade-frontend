@@ -41,15 +41,15 @@ export function Header() {
       </div>
 
       {/* Mobile nav */}
-      <nav className="md:hidden flex justify-center gap-4 pb-3">
+      <nav className="md:hidden flex justify-center gap-1 px-2 pb-3 overflow-x-auto">
         {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={
               pathname === item.href
-                ? 'text-white text-sm'
-                : 'text-zinc-500 text-sm'
+                ? 'tab tab-active text-xs px-3'
+                : 'tab text-xs px-3'
             }
           >
             {item.label}
