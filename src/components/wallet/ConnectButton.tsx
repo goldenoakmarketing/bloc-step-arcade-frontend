@@ -1,9 +1,7 @@
 'use client'
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { ArcadeButton } from '@/components/ui/ArcadeButton'
 
 export function ConnectButton() {
   const { address, isConnected } = useAccount()
@@ -11,122 +9,83 @@ export function ConnectButton() {
   const { disconnect } = useDisconnect()
   const [showModal, setShowModal] = useState(false)
 
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
-  }
+  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
 
   if (isConnected && address) {
     return (
       <div className="relative">
         <button
           onClick={() => setShowModal(!showModal)}
-          className="flex items-center gap-2 px-4 py-2 font-pixel text-xs
-                     bg-arcade-dark border-2 border-neon-cyan
-                     hover:bg-arcade-purple/20 transition-colors"
-          style={{
-            boxShadow: '0 0 10px rgba(0, 255, 255, 0.3)',
-          }}
+          className="btn btn-secondary text-sm"
         >
-          <span className="w-2 h-2 bg-neon-green rounded-full animate-pulse" />
-          <span className="text-neon-cyan">{formatAddress(address)}</span>
+          {formatAddress(address)}
         </button>
 
-        <AnimatePresence>
-          {showModal && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute right-0 top-full mt-2 p-4 min-w-[200px]
-                         bg-arcade-dark border-2 border-arcade-purple z-50"
+        {showModal && (
+          <div className="absolute right-0 top-full mt-2 card min-w-[200px] z-50">
+            <p className="text-sm text-muted mb-2">Connected</p>
+            <p className="text-xs break-all mb-4">{address}</p>
+            <button
+              className="btn btn-secondary btn-full text-sm"
+              onClick={() => {
+                disconnect()
+                setShowModal(false)
+              }}
             >
-              <p className="font-arcade text-sm text-gray-400 mb-3">Connected</p>
-              <p className="font-pixel text-xs text-white mb-4 break-all">
-                {address}
-              </p>
-              <ArcadeButton
-                variant="danger"
-                size="sm"
-                fullWidth
-                onClick={() => {
-                  disconnect()
-                  setShowModal(false)
-                }}
-              >
-                Disconnect
-              </ArcadeButton>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Disconnect
+            </button>
+          </div>
+        )}
       </div>
     )
   }
 
   return (
     <>
-      <ArcadeButton
+      <button
         onClick={() => setShowModal(true)}
-        variant="primary"
-        size="sm"
-        loading={isPending}
+        className="btn btn-primary text-sm"
+        disabled={isPending}
       >
-        Insert Coin
-      </ArcadeButton>
+        {isPending ? 'Connecting...' : 'Connect'}
+      </button>
 
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowModal(false)}
+      {showModal && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card max-w-sm w-full"
           >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-arcade-dark border-4 border-neon-pink p-6 max-w-md w-full"
-              style={{
-                boxShadow: '0 0 30px rgba(255, 0, 255, 0.5)',
-              }}
+            <h2 className="text-xl font-bold mb-6 text-center">Connect Wallet</h2>
+
+            <div className="space-y-3">
+              {connectors.map((connector) => (
+                <button
+                  key={connector.uid}
+                  onClick={() => {
+                    connect({ connector })
+                    setShowModal(false)
+                  }}
+                  className="btn btn-secondary btn-full justify-between"
+                >
+                  <span>{connector.name}</span>
+                  <span>→</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full mt-4 text-sm text-muted hover:text-white transition"
             >
-              <h2 className="font-pixel text-lg text-neon-pink text-center mb-6">
-                SELECT WALLET
-              </h2>
-
-              <div className="space-y-3">
-                {connectors.map((connector) => (
-                  <button
-                    key={connector.uid}
-                    onClick={() => {
-                      connect({ connector })
-                      setShowModal(false)
-                    }}
-                    className="w-full p-4 font-arcade text-lg text-left
-                               bg-arcade-black border-2 border-arcade-purple
-                               hover:border-neon-cyan hover:bg-arcade-purple/20
-                               transition-all duration-200
-                               flex items-center justify-between"
-                  >
-                    <span>{connector.name}</span>
-                    <span className="text-neon-cyan">→</span>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setShowModal(false)}
-                className="w-full mt-6 py-2 font-pixel text-xs text-gray-500
-                           hover:text-white transition-colors"
-              >
-                CANCEL
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

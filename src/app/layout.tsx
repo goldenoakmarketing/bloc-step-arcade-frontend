@@ -1,23 +1,17 @@
 import type { Metadata, Viewport } from 'next'
 import { Web3Provider } from '@/providers/Web3Provider'
 import { Header } from '@/components/layout/Header'
-import { Footer } from '@/components/layout/Footer'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'BLOC STEP ARCADE',
-  description: 'Retro arcade gaming on Base blockchain',
-  icons: {
-    icon: '/favicon.ico',
-  },
+  title: 'Bloc Step Arcade',
+  description: 'Play games on Base blockchain',
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: '#0a0a0f',
+  themeColor: '#09090b',
 }
 
 export default function RootLayout({
@@ -27,13 +21,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-arcade-black grid-bg">
+      <body>
         <Web3Provider>
           <Header />
-          <main className="flex-1 pt-24 md:pt-20">
+          <main className="pt-16">
             {children}
           </main>
-          <Footer />
         </Web3Provider>
       </body>
     </html>
