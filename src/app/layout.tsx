@@ -23,10 +23,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Web3Provider>
-          <Header />
-          <main className="pt-16">
+          <main className="pb-20">
             {children}
           </main>
+          <Header />
         </Web3Provider>
       </body>
     </html>

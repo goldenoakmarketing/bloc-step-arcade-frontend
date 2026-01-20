@@ -2,37 +2,39 @@
 
 import { useState } from 'react'
 
-type LeaderboardType = 'yeet' | 'staking' | 'time'
+type LeaderboardType = 'lost' | 'staking' | 'time'
 
 const tabs: { id: LeaderboardType; label: string }[] = [
-  { id: 'yeet', label: 'Yeet' },
+  { id: 'lost', label: 'Most Lost' },
   { id: 'staking', label: 'Staking' },
-  { id: 'time', label: 'Time' },
+  { id: 'time', label: 'Time Played' },
 ]
 
 // Mock data for development
+// Identity types: localpay (.localpay), farcaster (@user), basens (user.base.eth)
+// anonymous = true means user chose to hide their identity (shows as Swayze)
 const mockData = {
-  yeet: [
-    { rank: 1, address: '0x1234...5678', username: 'yeetmaster', score: '1,000,000' },
-    { rank: 2, address: '0xabcd...efgh', username: 'blazer', score: '750,000' },
-    { rank: 3, address: '0x9876...5432', username: null, score: '500,000' },
-    { rank: 4, address: '0xdead...beef', username: 'cryptokid', score: '250,000' },
-    { rank: 5, address: '0xcafe...babe', username: null, score: '100,000' },
+  lost: [
+    { rank: 1, name: 'generous.localpay', type: 'localpay', anonymous: false, score: '1,000 Q' },
+    { rank: 2, name: '@giver', type: 'farcaster', anonymous: false, score: '750 Q' },
+    { rank: 3, name: null, type: null, anonymous: true, score: '500 Q' },
+    { rank: 4, name: 'phil.base.eth', type: 'basens', anonymous: false, score: '250 Q' },
+    { rank: 5, name: null, type: null, anonymous: true, score: '100 Q' },
   ],
   staking: [
-    { rank: 1, address: '0xabcd...efgh', username: 'whale', score: '5,000,000' },
-    { rank: 2, address: '0x1234...5678', username: 'hodler', score: '2,500,000' },
-    { rank: 3, address: '0x9876...5432', username: null, score: '1,000,000' },
+    { rank: 1, name: 'whale.localpay', type: 'localpay', anonymous: false, score: '5M BLOC' },
+    { rank: 2, name: null, type: null, anonymous: true, score: '2.5M BLOC' },
+    { rank: 3, name: '@hodler', type: 'farcaster', anonymous: false, score: '1M BLOC' },
   ],
   time: [
-    { rank: 1, address: '0x9876...5432', username: 'gamer1', score: '48:32:15' },
-    { rank: 2, address: '0x1234...5678', username: null, score: '36:15:42' },
-    { rank: 3, address: '0xabcd...efgh', username: 'nolife', score: '24:00:00' },
+    { rank: 1, name: 'gamer.base.eth', type: 'basens', anonymous: false, score: '200 Q' },
+    { rank: 2, name: null, type: null, anonymous: true, score: '150 Q' },
+    { rank: 3, name: '@dedicated', type: 'farcaster', anonymous: false, score: '100 Q' },
   ],
 }
 
 export default function LeaderboardPage() {
-  const [activeTab, setActiveTab] = useState<LeaderboardType>('yeet')
+  const [activeTab, setActiveTab] = useState<LeaderboardType>('lost')
   const entries = mockData[activeTab]
 
   const getRankDisplay = (rank: number) => {
@@ -40,6 +42,17 @@ export default function LeaderboardPage() {
     if (rank === 2) return '🥈'
     if (rank === 3) return '🥉'
     return `#${rank}`
+  }
+
+  const getTabDescription = () => {
+    switch (activeTab) {
+      case 'lost':
+        return 'Players who lost the most quarters for others to find'
+      case 'staking':
+        return 'Top $BLOC stakers'
+      case 'time':
+        return 'Most quarters spent playing'
+    }
   }
 
   return (
@@ -52,31 +65,41 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex justify-center gap-2 mb-6">
+        <div className="flex justify-center gap-2 mb-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={activeTab === tab.id ? 'tab tab-active' : 'tab'}
+              className={activeTab === tab.id ? 'tab tab-active text-xs' : 'tab text-xs'}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
+        <p className="text-xs text-muted text-center mb-6">{getTabDescription()}</p>
+
         {/* List */}
         <div className="card">
           <div className="divide-y divide-[#27272a]">
-            {entries.map((entry) => (
-              <div key={entry.address} className="leaderboard-row">
+            {entries.map((entry, idx) => (
+              <div key={idx} className="leaderboard-row">
                 <div className="w-12 text-lg">
                   {getRankDisplay(entry.rank)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  {entry.username && (
-                    <div className="font-medium truncate">@{entry.username}</div>
+                  {entry.anonymous ? (
+                    <div className="flex items-center gap-1.5 text-zinc-600">
+                      <span>👻</span>
+                      <span className="italic">Swayze</span>
+                    </div>
+                  ) : (
+                    <div className="font-medium truncate flex items-center gap-1.5">
+                      {entry.type === 'farcaster' && <span className="text-purple-400">{entry.name}</span>}
+                      {entry.type === 'localpay' && <span className="text-emerald-400">{entry.name}</span>}
+                      {entry.type === 'basens' && <span className="text-blue-400">{entry.name}</span>}
+                    </div>
                   )}
-                  <div className="text-sm text-muted truncate">{entry.address}</div>
                 </div>
                 <div className="text-right font-bold">
                   {entry.score}

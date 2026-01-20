@@ -2,18 +2,20 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-type GameState = 'idle' | 'playing' | 'paused' | 'gameover'
+type GameState = 'idle' | 'countdown' | 'playing' | 'paused' | 'gameover'
 
 export default function PlayPage() {
   const [gameState, setGameState] = useState<GameState>('idle')
   const [score, setScore] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(60)
+  const [timeLeft, setTimeLeft] = useState(900) // 15 min = 900 seconds
   const [combo, setCombo] = useState(0)
   const [highScore, setHighScore] = useState(0)
+  const [hasPlayed, setHasPlayed] = useState(false) // Track if user actually played
   const comboTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const startTimeRef = useRef<number>(0)
 
-  // Mock time balance for development
-  const [timeBalance, setTimeBalance] = useState(300)
+  // Mock quarter balance for development
+  const [quarterBalance, setQuarterBalance] = useState(4)
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -21,14 +23,18 @@ export default function PlayPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Game timer
+  const formatQuarters = (quarters: number) => {
+    return `${quarters}Q`
+  }
+
+  // Game timer - ticks whether playing or not once started
   useEffect(() => {
-    if (gameState !== 'playing') return
+    if (gameState !== 'countdown' && gameState !== 'playing' && gameState !== 'paused') return
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          endGame()
+          endGame(false) // time ran out
           return 0
         }
         return prev - 1
@@ -38,9 +44,17 @@ export default function PlayPage() {
     return () => clearInterval(timer)
   }, [gameState])
 
+  // Check for abandon (less than 1 minute of play)
+  const checkAbandon = () => {
+    const playDuration = Date.now() - startTimeRef.current
+    const oneMinute = 60 * 1000
+    return !hasPlayed || playDuration < oneMinute
+  }
+
   const handleTap = useCallback(() => {
     if (gameState !== 'playing') return
 
+    setHasPlayed(true)
     const points = 10 * (1 + Math.floor(combo / 5))
     setScore((prev) => prev + points)
     setCombo((prev) => prev + 1)
@@ -50,21 +64,38 @@ export default function PlayPage() {
   }, [gameState, combo])
 
   const startGame = () => {
-    if (timeBalance < 60) {
-      alert('Not enough time! Purchase more arcade time.')
+    if (quarterBalance < 1) {
+      alert('No quarters! Buy more to play.')
       return
     }
 
-    setTimeBalance((prev) => prev - 60)
+    // Deduct quarter
+    setQuarterBalance((prev) => prev - 1)
+    startTimeRef.current = Date.now()
+    setHasPlayed(false)
     setScore(0)
     setCombo(0)
-    setTimeLeft(60)
+    setTimeLeft(900) // 15 minutes
     setGameState('playing')
   }
 
-  const endGame = () => {
+  const endGame = (manual: boolean = true) => {
+    const wasAbandoned = checkAbandon()
+
+    if (wasAbandoned && manual) {
+      // Quarter goes to lost & found pool
+      console.log('Game abandoned - quarter goes to Lost & Found')
+    }
+
     setGameState('gameover')
     if (score > highScore) setHighScore(score)
+  }
+
+  const abandonGame = () => {
+    // Explicitly abandon - quarter goes to pool
+    console.log('Quarter returned to Lost & Found pool')
+    setGameState('idle')
+    // Don't refund the quarter - it goes to lost pool
   }
 
   return (
@@ -76,8 +107,8 @@ export default function PlayPage() {
           <div className="text-xl font-bold text-gradient">{score.toLocaleString()}</div>
         </div>
         <div className="text-center">
-          <div className="text-xs text-muted">Time</div>
-          <div className={`text-xl font-bold ${timeLeft <= 10 ? 'text-red-500' : ''}`}>
+          <div className="text-xs text-muted">Time Left</div>
+          <div className={`text-xl font-bold ${timeLeft <= 60 ? 'text-red-500' : ''}`}>
             {formatTime(timeLeft)}
           </div>
         </div>
@@ -86,6 +117,15 @@ export default function PlayPage() {
           <div className="text-xl font-bold">{highScore.toLocaleString()}</div>
         </div>
       </div>
+
+      {/* Quarter indicator when playing */}
+      {(gameState === 'playing' || gameState === 'paused') && (
+        <div className="text-center py-2 border-b border-[#27272a] bg-zinc-900/50">
+          <span className="text-xs text-muted">
+            🪙 Using 1 Quarter • {formatQuarters(quarterBalance)} remaining
+          </span>
+        </div>
+      )}
 
       {/* Combo */}
       {combo > 0 && gameState === 'playing' && (
@@ -101,13 +141,19 @@ export default function PlayPage() {
             <div className="text-6xl mb-6">🕹️</div>
             <h2 className="text-2xl font-bold mb-2">Ready?</h2>
             <div className="mb-6">
-              <div className="text-muted text-sm">Time Balance</div>
-              <div className="text-2xl font-bold text-gradient">{formatTime(timeBalance)}</div>
+              <div className="text-muted text-sm">Quarter Balance</div>
+              <div className="text-2xl font-bold text-gradient">{formatQuarters(quarterBalance)}</div>
             </div>
-            <button onClick={startGame} className="btn btn-primary btn-lg btn-full">
-              Start Game
+            <button
+              onClick={startGame}
+              className="btn btn-primary btn-lg btn-full"
+              disabled={quarterBalance < 1}
+            >
+              Insert Quarter
             </button>
-            <p className="text-xs text-muted mt-3">Uses 60 seconds of time</p>
+            <p className="text-xs text-muted mt-3">
+              1 Quarter = 15 min session • Clock starts now
+            </p>
           </div>
         )}
 
@@ -119,6 +165,9 @@ export default function PlayPage() {
             <div className="text-center">
               <div className="text-8xl mb-4">👾</div>
               <p className="text-muted">Tap to score!</p>
+              {!hasPlayed && (
+                <p className="text-xs text-yellow-500 mt-2">Tap within 1 min or quarter is lost!</p>
+              )}
             </div>
           </div>
         )}
@@ -134,8 +183,8 @@ export default function PlayPage() {
               <div className="badge badge-success mb-4">New High Score!</div>
             )}
             <div className="space-y-3">
-              <button onClick={startGame} className="btn btn-primary btn-full">
-                Play Again
+              <button onClick={startGame} className="btn btn-primary btn-full" disabled={quarterBalance < 1}>
+                Insert Another Quarter
               </button>
               <button onClick={() => setGameState('idle')} className="btn btn-secondary btn-full">
                 Exit
@@ -146,13 +195,15 @@ export default function PlayPage() {
 
         {gameState === 'paused' && (
           <div className="card text-center max-w-sm w-full">
-            <h2 className="text-2xl font-bold mb-6">Paused</h2>
+            <h2 className="text-2xl font-bold mb-2">Paused</h2>
+            <p className="text-muted text-sm mb-4">Clock is still running!</p>
+            <div className="text-3xl font-bold mb-6">{formatTime(timeLeft)}</div>
             <div className="space-y-3">
               <button onClick={() => setGameState('playing')} className="btn btn-primary btn-full">
                 Resume
               </button>
-              <button onClick={endGame} className="btn btn-secondary btn-full">
-                Quit
+              <button onClick={() => endGame(true)} className="btn btn-secondary btn-full">
+                End Game
               </button>
             </div>
           </div>
@@ -165,7 +216,7 @@ export default function PlayPage() {
           <button onClick={() => setGameState('paused')} className="btn btn-secondary">
             Pause
           </button>
-          <button onClick={endGame} className="btn btn-secondary">
+          <button onClick={() => endGame(true)} className="btn btn-secondary">
             End
           </button>
         </div>

@@ -236,3 +236,8 @@ a {
   background: var(--card);
   border: 1px solid var(--border);
 }
+
+/* Safe area for iOS devices with home bar */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
