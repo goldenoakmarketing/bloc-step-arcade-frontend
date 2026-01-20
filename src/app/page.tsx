@@ -48,7 +48,7 @@ export default function HomePage() {
           <div className="stat-card">
             <div className="text-2xl mb-2">🚀</div>
             <div className="stat-label">Yeet</div>
-            <p className="text-xs text-muted mt-1">Burn for leaderboard</p>
+            <p className="text-xs text-muted mt-1">Throw quarters at old people</p>
           </div>
           <div className="stat-card">
             <div className="text-2xl mb-2">💰</div>

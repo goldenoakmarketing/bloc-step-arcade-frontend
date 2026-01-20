@@ -20,7 +20,6 @@ export default function InfoPage() {
               <p className="text-sm text-muted leading-relaxed">
                 Quarters are <span className="text-white">not designed to be an asset you profit from</span>.
                 They're arcade tokens — meant to be spent, shared, lost, and found.
-                If you're looking to "make money," this isn't the place.
               </p>
             </div>
           </div>
@@ -50,6 +49,36 @@ export default function InfoPage() {
           </ul>
         </div>
 
+        {/* Keep Playing */}
+        <div className="card mb-4">
+          <h2 className="font-bold mb-3 flex items-center gap-2">
+            <span>⏱️</span> Keep Playing
+          </h2>
+          <p className="text-sm text-muted leading-relaxed mb-3">
+            Running low on time? No need to stop your game.
+          </p>
+          <div className="bg-zinc-900/50 rounded-lg p-3 space-y-3 text-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">👆👆</span>
+              <div>
+                <div className="text-white font-medium">Double-tap the timer</div>
+                <div className="text-muted text-xs">Add another quarter (+15 min) without interrupting your game</div>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📤</span>
+              <div>
+                <div className="text-white font-medium">Share your score</div>
+                <div className="text-muted text-xs">Timer pauses while the share card is open — take your time</div>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-muted mt-3">
+            When time is under 2 minutes and you have quarters available,
+            you'll see a hint to double-tap for more time.
+          </p>
+        </div>
+
         {/* The Lost & Found */}
         <div className="card mb-4">
           <h2 className="font-bold mb-3 flex items-center gap-2">
@@ -61,7 +90,7 @@ export default function InfoPage() {
           </p>
           <div className="bg-zinc-900/50 rounded-lg p-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted">Every 6th quarter purchased</span>
+              <span className="text-muted">Every 8th quarter purchased</span>
               <span className="text-yellow-500">→ Pool</span>
             </div>
             <div className="flex justify-between">
@@ -74,8 +103,8 @@ export default function InfoPage() {
             </div>
           </div>
           <p className="text-xs text-muted mt-3">
-            Players can check the Lost & Found to see if any quarters are waiting.
-            How many you can find depends on how often you play.
+            Players can check the Lost & Found once per hour to see if any quarters are waiting.
+            How many you find depends on luck and the pool's current state.
           </p>
         </div>
 
@@ -97,18 +126,18 @@ export default function InfoPage() {
             <div className="text-center mb-2 text-muted text-xs">Pool Overflow Distribution</div>
             <div className="flex justify-center gap-8">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gradient">50%</div>
+                <div className="text-2xl font-bold text-gradient">75%</div>
                 <div className="text-xs text-muted">Staking Rewards</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">50%</div>
+                <div className="text-2xl font-bold">25%</div>
                 <div className="text-xs text-muted">Operations</div>
               </div>
             </div>
           </div>
           <p className="text-xs text-muted mt-3">
-            No manual intervention. When overflow happens, 50% <span className="text-white">instantly</span> flows
-            to the staking rewards pool. The other 50% keeps the lights on.
+            No manual intervention. When overflow happens, 75% <span className="text-white">instantly</span> flows
+            to the staking rewards pool. The other 25% keeps the lights on.
           </p>
         </div>
 
