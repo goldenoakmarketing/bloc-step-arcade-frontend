@@ -47,8 +47,8 @@ export default function HomePage() {
           </div>
           <div className="stat-card">
             <div className="text-2xl mb-2">🚀</div>
-            <div className="stat-label">Yeet</div>
-            <p className="text-xs text-muted mt-1">Throw quarters at old people</p>
+            <div className="stat-label">Donate</div>
+            <p className="text-xs text-muted mt-1">Leave quarters for others to find</p>
           </div>
           <div className="stat-card">
             <div className="text-2xl mb-2">💰</div>

@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Ping (Pong Clone)
- * Classic arcade game - public domain concept
+ * Ping (Pong Clone) - CHAOS MODE
+ * Multi-ball madness! 3 balls, first to 10 wins
  * Original Pong by Atari (1972)
  */
 
@@ -15,42 +15,109 @@ const PADDLE_WIDTH = 60
 const PADDLE_HEIGHT = 12
 const BALL_SIZE = 12
 const PADDLE_SPEED = 8
-const INITIAL_BALL_SPEED = 3
-const WALL_BOUNCE_MULTIPLIER = 3 // 200% increase = 3x
+const BALL_SPEED = 4.5
+const WIN_SCORE = 10
+const MIN_BALLS = 2
+const MAX_BALLS = 3
+
+type BallColor = 'red' | 'green' | 'yellow'
+
+interface Ball {
+  id: number
+  x: number
+  y: number
+  velX: number
+  velY: number
+  color: BallColor
+}
+
+const BALL_COLORS: Record<BallColor, string> = {
+  red: '#ef4444',
+  green: '#22c55e',
+  yellow: '#fbbf24',
+}
+
+let nextBallId = 1
 
 export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
   const [gameStarted, setGameStarted] = useState(false)
   const [playerScore, setPlayerScore] = useState(0)
   const [cpuScore, setCpuScore] = useState(0)
+  const [tick, setTick] = useState(0)
+  const [gameWon, setGameWon] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const keysRef = useRef<Set<string>>(new Set())
 
-  // Use refs for game physics to avoid stale closure issues
   const gameRef = useRef({
     playerX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
     cpuX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
-    ballX: CANVAS_WIDTH / 2,
-    ballY: CANVAS_HEIGHT / 2,
-    ballVelX: 2,
-    ballVelY: 3,
-    ballSpeed: INITIAL_BALL_SPEED,
+    balls: [] as Ball[],
   })
 
-  const resetBall = useCallback((direction: 1 | -1) => {
+  // Launch ball directly at player (downward)
+  const launchAtPlayer = (ball: Ball) => {
+    const angle = (Math.random() - 0.5) * 0.3
+    ball.velX = Math.sin(angle) * BALL_SPEED
+    ball.velY = Math.abs(Math.cos(angle) * BALL_SPEED)
+  }
+
+  // Launch ball directly at CPU (upward)
+  const launchAtCPU = (ball: Ball) => {
+    const angle = (Math.random() - 0.5) * 0.3
+    ball.velX = Math.sin(angle) * BALL_SPEED
+    ball.velY = -Math.abs(Math.cos(angle) * BALL_SPEED)
+  }
+
+  // Launch ball diagonally toward a wall
+  const launchDiagonal = (ball: Ball) => {
+    const goLeft = Math.random() > 0.5
+    const goDown = Math.random() > 0.5
+    const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.3
+    ball.velX = (goLeft ? -1 : 1) * Math.sin(angle) * BALL_SPEED
+    ball.velY = (goDown ? 1 : -1) * Math.cos(angle) * BALL_SPEED
+  }
+
+  const createBall = (color: BallColor, launchFn: (ball: Ball) => void): Ball => {
+    const ball: Ball = {
+      id: nextBallId++,
+      x: CANVAS_WIDTH / 2,
+      y: CANVAS_HEIGHT / 2,
+      velX: 0,
+      velY: 0,
+      color,
+    }
+    launchFn(ball)
+    return ball
+  }
+
+  const initializeBalls = useCallback(() => {
     const g = gameRef.current
-    g.ballX = CANVAS_WIDTH / 2
-    g.ballY = CANVAS_HEIGHT / 2
-    const angle = (Math.random() - 0.5) * Math.PI / 4
-    g.ballVelX = Math.sin(angle) * g.ballSpeed
-    g.ballVelY = Math.cos(angle) * g.ballSpeed * direction
+    nextBallId = 1
+    g.balls = [
+      createBall('red', launchAtPlayer),
+      createBall('green', launchDiagonal),
+      createBall('yellow', launchAtCPU),
+    ]
   }, [])
+
+  const spawnNewBall = () => {
+    const g = gameRef.current
+    if (g.balls.length < MAX_BALLS) {
+      const colors: BallColor[] = ['red', 'green', 'yellow']
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      g.balls.push(createBall(color, launchDiagonal))
+    }
+  }
 
   const startGame = useCallback(() => {
     if (!gameStarted) {
       setGameStarted(true)
-      resetBall(1)
+      setGameWon(false)
+      setPlayerScore(0)
+      setCpuScore(0)
+      initializeBalls()
     }
-  }, [gameStarted, resetBall])
+  }, [gameStarted, initializeBalls])
 
   // Keyboard controls
   useEffect(() => {
@@ -78,7 +145,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
 
   // Game loop
   useEffect(() => {
-    if (isPaused || !gameStarted) return
+    if (isPaused || !gameStarted || gameWon) return
 
     const gameLoop = setInterval(() => {
       const g = gameRef.current
@@ -91,90 +158,129 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
         g.playerX = Math.min(CANVAS_WIDTH - PADDLE_WIDTH, g.playerX + PADDLE_SPEED)
       }
 
-      // CPU AI - follows ball with some lag
-      const targetX = g.ballX - PADDLE_WIDTH / 2
-      const diff = targetX - g.cpuX
-      const cpuSpeed = PADDLE_SPEED * 0.55
-      if (Math.abs(diff) < cpuSpeed) {
-        g.cpuX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, targetX))
-      } else {
-        g.cpuX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, g.cpuX + (diff > 0 ? cpuSpeed : -cpuSpeed)))
+      // CPU AI - tracks the ball closest to CPU paddle (lowest Y that's moving up, or highest Y overall)
+      let targetBall = g.balls[0]
+      for (const ball of g.balls) {
+        // Prioritize balls moving toward CPU (negative velY)
+        if (ball.velY < 0 && ball.y < targetBall.y) {
+          targetBall = ball
+        } else if (targetBall.velY >= 0 && ball.y < targetBall.y) {
+          targetBall = ball
+        }
       }
 
-      // Move ball
-      g.ballX += g.ballVelX
-      g.ballY += g.ballVelY
+      if (targetBall) {
+        const targetX = targetBall.x - PADDLE_WIDTH / 2
+        const diff = targetX - g.cpuX
+        const cpuSpeed = PADDLE_SPEED * 0.35
+        if (Math.abs(diff) < cpuSpeed) {
+          g.cpuX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, targetX))
+        } else {
+          g.cpuX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, g.cpuX + (diff > 0 ? cpuSpeed : -cpuSpeed)))
+        }
+      }
 
-      // Wall bounce - LEFT and RIGHT walls with 200% increased bounce
       const margin = BALL_SIZE / 2
-      if (g.ballX <= margin) {
-        g.ballX = margin
-        g.ballVelX = Math.abs(g.ballVelX) * WALL_BOUNCE_MULTIPLIER
-        // Cap the velocity so it doesn't go crazy
-        g.ballVelX = Math.min(g.ballVelX, g.ballSpeed * 2)
-      } else if (g.ballX >= CANVAS_WIDTH - margin) {
-        g.ballX = CANVAS_WIDTH - margin
-        g.ballVelX = -Math.abs(g.ballVelX) * WALL_BOUNCE_MULTIPLIER
-        // Cap the velocity
-        g.ballVelX = Math.max(g.ballVelX, -g.ballSpeed * 2)
-      }
-
-      // Normalize velocity over time to prevent permanent speedup
-      if (Math.abs(g.ballVelX) > g.ballSpeed) {
-        g.ballVelX *= 0.98
-      }
-
-      // Player paddle collision (bottom)
       const playerPaddleY = CANVAS_HEIGHT - PADDLE_HEIGHT - 20
-      if (g.ballY >= playerPaddleY - BALL_SIZE / 2 && g.ballY <= playerPaddleY + PADDLE_HEIGHT) {
-        if (g.ballX >= g.playerX - BALL_SIZE / 2 && g.ballX <= g.playerX + PADDLE_WIDTH + BALL_SIZE / 2) {
-          const hitPos = (g.ballX - g.playerX) / PADDLE_WIDTH
-          const angle = (hitPos - 0.5) * Math.PI / 3
-          g.ballVelX = Math.sin(angle) * g.ballSpeed
-          g.ballVelY = -Math.abs(Math.cos(angle) * g.ballSpeed)
-          g.ballY = playerPaddleY - BALL_SIZE / 2
-        }
-      }
-
-      // CPU paddle collision (top)
       const cpuPaddleY = 20
-      if (g.ballY <= cpuPaddleY + PADDLE_HEIGHT + BALL_SIZE / 2 && g.ballY >= cpuPaddleY) {
-        if (g.ballX >= g.cpuX - BALL_SIZE / 2 && g.ballX <= g.cpuX + PADDLE_WIDTH + BALL_SIZE / 2) {
-          const hitPos = (g.ballX - g.cpuX) / PADDLE_WIDTH
-          const angle = (hitPos - 0.5) * Math.PI / 3
-          g.ballVelX = Math.sin(angle) * g.ballSpeed
-          g.ballVelY = Math.abs(Math.cos(angle) * g.ballSpeed)
-          g.ballY = cpuPaddleY + PADDLE_HEIGHT + BALL_SIZE / 2
+      const ballsToRemove: number[] = []
+      let playerScored = 0
+      let cpuScored = 0
+
+      // Process each ball
+      for (const ball of g.balls) {
+        // Move ball
+        ball.x += ball.velX
+        ball.y += ball.velY
+
+        // Wall bounce - LEFT and RIGHT walls
+        if (ball.x <= margin) {
+          ball.x = margin
+          ball.velX = Math.abs(ball.velX)
+        } else if (ball.x >= CANVAS_WIDTH - margin) {
+          ball.x = CANVAS_WIDTH - margin
+          ball.velX = -Math.abs(ball.velX)
+        }
+
+        // Player paddle collision (bottom)
+        if (ball.y >= playerPaddleY - BALL_SIZE / 2 && ball.y <= playerPaddleY + PADDLE_HEIGHT) {
+          if (ball.x >= g.playerX - BALL_SIZE / 2 && ball.x <= g.playerX + PADDLE_WIDTH + BALL_SIZE / 2) {
+            const hitPos = (ball.x - g.playerX) / PADDLE_WIDTH
+            const angle = (hitPos - 0.5) * Math.PI / 3
+            ball.velX = Math.sin(angle) * BALL_SPEED
+            ball.velY = -Math.abs(Math.cos(angle) * BALL_SPEED)
+            ball.y = playerPaddleY - BALL_SIZE / 2
+          }
+        }
+
+        // CPU paddle collision (top)
+        if (ball.y <= cpuPaddleY + PADDLE_HEIGHT + BALL_SIZE / 2 && ball.y >= cpuPaddleY) {
+          if (ball.x >= g.cpuX - BALL_SIZE / 2 && ball.x <= g.cpuX + PADDLE_WIDTH + BALL_SIZE / 2) {
+            const hitPos = (ball.x - g.cpuX) / PADDLE_WIDTH
+            const angle = (hitPos - 0.5) * Math.PI / 3
+            ball.velX = Math.sin(angle) * BALL_SPEED
+            ball.velY = Math.abs(Math.cos(angle) * BALL_SPEED)
+            ball.y = cpuPaddleY + PADDLE_HEIGHT + BALL_SIZE / 2
+          }
+        }
+
+        // Score - ball goes past paddles
+        if (ball.y <= 0) {
+          // Player scores
+          playerScored++
+          ballsToRemove.push(ball.id)
+        } else if (ball.y >= CANVAS_HEIGHT) {
+          // CPU scores
+          cpuScored++
+          ballsToRemove.push(ball.id)
         }
       }
 
-      // Score - ball goes past paddles
-      if (g.ballY <= 0) {
-        // Player scores
-        setPlayerScore(s => s + 1)
-        onScore(10)
-        g.ballSpeed = Math.min(g.ballSpeed + 0.2, 6)
-        resetBall(-1)
+      // Remove scored balls
+      if (ballsToRemove.length > 0) {
+        g.balls = g.balls.filter(b => !ballsToRemove.includes(b.id))
       }
 
-      if (g.ballY >= CANVAS_HEIGHT) {
-        // CPU scores
+      // Update scores
+      if (playerScored > 0) {
+        setPlayerScore(s => {
+          const newScore = s + playerScored
+          if (newScore >= WIN_SCORE) {
+            setGameWon(true)
+            onScore(100) // Bonus for winning
+          } else {
+            onScore(10 * playerScored)
+          }
+          return newScore
+        })
+      }
+
+      if (cpuScored > 0) {
         setCpuScore(s => {
-          const newScore = s + 1
-          if (newScore >= 5) {
+          const newScore = s + cpuScored
+          if (newScore >= WIN_SCORE) {
             onGameOver()
           }
           return newScore
         })
-        resetBall(1)
+      }
+
+      // Spawn new balls if below minimum
+      while (g.balls.length < MIN_BALLS) {
+        spawnNewBall()
+      }
+
+      // Spawn to maintain 3 balls if we have exactly 2
+      if (g.balls.length === MIN_BALLS && g.balls.length < MAX_BALLS) {
+        spawnNewBall()
       }
 
       // Force re-render
-      setPlayerScore(s => s)
+      setTick(t => t + 1)
     }, 16)
 
     return () => clearInterval(gameLoop)
-  }, [isPaused, gameStarted, onScore, onGameOver, resetBall])
+  }, [isPaused, gameStarted, gameWon, onScore, onGameOver])
 
   // Draw game
   useEffect(() => {
@@ -212,11 +318,13 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
     ctx.fillStyle = '#10b981'
     ctx.fillRect(g.playerX, CANVAS_HEIGHT - PADDLE_HEIGHT - 20, PADDLE_WIDTH, PADDLE_HEIGHT)
 
-    // Ball
-    ctx.fillStyle = '#fbbf24'
-    ctx.beginPath()
-    ctx.arc(g.ballX, g.ballY, BALL_SIZE / 2, 0, Math.PI * 2)
-    ctx.fill()
+    // Draw all balls
+    for (const ball of g.balls) {
+      ctx.fillStyle = BALL_COLORS[ball.color]
+      ctx.beginPath()
+      ctx.arc(ball.x, ball.y, BALL_SIZE / 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
 
     // Scores
     ctx.fillStyle = 'white'
@@ -231,16 +339,33 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
       ctx.fillStyle = 'white'
       ctx.font = 'bold 20px sans-serif'
-      ctx.fillText('Tap to Start!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+      ctx.fillText('CHAOS MODE', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20)
       ctx.font = '14px sans-serif'
-      ctx.fillText('First to 5 loses', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30)
+      ctx.fillText('3 balls! First to 10 wins', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10)
+      ctx.fillText('Tap to Start!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 35)
     }
 
-  }, [playerScore, cpuScore, gameStarted])
+    // Win message
+    if (gameWon) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+      ctx.fillStyle = '#22c55e'
+      ctx.font = 'bold 24px sans-serif'
+      ctx.fillText('YOU WIN!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+      ctx.fillStyle = 'white'
+      ctx.font = '14px sans-serif'
+      ctx.fillText('Tap to play again', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 30)
+    }
+
+  }, [playerScore, cpuScore, gameStarted, gameWon, tick])
 
   // Touch controls
   const handleTouch = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (!gameStarted) {
+    if (!gameStarted || gameWon) {
+      if (gameWon) {
+        setGameWon(false)
+        setGameStarted(false)
+      }
       startGame()
       return
     }
@@ -252,7 +377,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const x = clientX - rect.left
     gameRef.current.playerX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, x - PADDLE_WIDTH / 2))
-  }, [gameStarted, startGame])
+  }, [gameStarted, gameWon, startGame])
 
   return (
     <div className="text-center">
@@ -261,7 +386,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         onClick={handleTouch}
-        onMouseMove={gameStarted ? handleTouch : undefined}
+        onMouseMove={gameStarted && !gameWon ? handleTouch : undefined}
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
         className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer select-none"
@@ -290,7 +415,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
       </div>
 
       <p className="text-muted text-sm mt-4">
-        Move to bounce the ball. Don't let it past you!
+        Multi-ball chaos! Don't let them past you!
       </p>
 
       <p className="text-zinc-600 text-xs mt-2">
@@ -304,7 +429,7 @@ export const PingMeta = {
   id: 'ping',
   name: 'Ping',
   icon: '\ud83c\udfd3',
-  description: 'Classic paddle game vs CPU',
+  description: 'Chaotic 3-ball paddle game vs CPU',
   color: 'from-amber-500 to-orange-600',
   credit: 'Atari (1972 concept)',
   license: 'Public Domain',

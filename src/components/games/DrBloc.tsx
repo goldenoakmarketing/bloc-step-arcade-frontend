@@ -391,25 +391,25 @@ export function DrBloc({ onScore, onGameOver, isPaused }: GameProps) {
           onClick={() => movePiece(-1, 0)}
           className="btn bg-zinc-800 hover:bg-zinc-700 p-3"
         >
-          \u2190
+          ←
         </button>
         <button
           onClick={rotatePiece}
           className="btn bg-zinc-800 hover:bg-zinc-700 p-3"
         >
-          \u21bb
+          ↻
         </button>
         <button
           onClick={() => movePiece(0, 1)}
           className="btn bg-zinc-800 hover:bg-zinc-700 p-3"
         >
-          \u2193
+          ↓
         </button>
         <button
           onClick={() => movePiece(1, 0)}
           className="btn bg-zinc-800 hover:bg-zinc-700 p-3"
         >
-          \u2192
+          →
         </button>
       </div>
       <button

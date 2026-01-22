@@ -5,7 +5,7 @@ import { useState } from 'react'
 type LeaderboardType = 'lost' | 'staking' | 'time'
 
 const tabs: { id: LeaderboardType; label: string }[] = [
-  { id: 'lost', label: 'Most Lost' },
+  { id: 'lost', label: 'Donations' },
   { id: 'staking', label: 'Staking' },
   { id: 'time', label: 'Time Played' },
 ]

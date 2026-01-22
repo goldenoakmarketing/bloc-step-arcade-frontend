@@ -114,7 +114,7 @@ export default function InfoPage() {
             <span>🌊</span> The Overflow
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
-            The Lost & Found pool has a cap of 100 quarters. When quarters overflow,
+            The Lost & Found pool has a cap of 250 quarters. When quarters overflow,
             they don't disappear — they <span className="text-white">automatically</span> feed the ecosystem.
           </p>
           <div className="bg-zinc-900/50 rounded-lg p-3 text-sm">
