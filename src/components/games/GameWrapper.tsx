@@ -19,26 +19,85 @@ interface GameWrapperProps {
   onUseQuarter: () => void
 }
 
+interface LeaderboardEntry {
+  rank: number
+  name: string
+  score: number
+  isCurrentPlayer?: boolean
+}
+
 interface ShareCardProps {
   gameName: string
   gameIcon: string
   score: number
   highScore: number
   isNewHighScore: boolean
+  leaderboard: LeaderboardEntry[]
+  playerRank: number
   onClose: () => void
   onShare: () => void
 }
 
-function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, onClose, onShare }: ShareCardProps) {
+// Mock leaderboard generator - inserts player score into fake data
+function getMockLeaderboard(gameId: string, playerScore: number): { entries: LeaderboardEntry[], playerRank: number } {
+  // Seeded "random" scores based on gameId for consistency
+  const seed = gameId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+  const mockPlayers = [
+    { name: 'Swayze', base: 15000 },
+    { name: 'arcade.base', base: 12000 },
+    { name: '@degenking', base: 9500 },
+    { name: '.localpay', base: 7000 },
+    { name: '@arcadeboss', base: 5500 },
+    { name: 'pixel.eth', base: 4000 },
+    { name: '@quarterhoarder', base: 2500 },
+  ]
+
+  // Generate scores with some variation based on game
+  const mockScores = mockPlayers.map(p => ({
+    name: p.name,
+    score: Math.floor(p.base * (0.8 + (seed % 100) / 200))
+  }))
+
+  // Add player score
+  const allScores = [...mockScores, { name: 'You', score: playerScore, isPlayer: true }]
+
+  // Sort by score descending
+  allScores.sort((a, b) => b.score - a.score)
+
+  // Find player rank
+  const playerRank = allScores.findIndex(s => 'isPlayer' in s && s.isPlayer) + 1
+
+  // Take top 5, but ensure player is included if in top 7
+  let topEntries = allScores.slice(0, 5)
+
+  // If player is ranked 6-7, show top 4 + player
+  if (playerRank > 5 && playerRank <= 7) {
+    topEntries = [...allScores.slice(0, 4), allScores[playerRank - 1]]
+  }
+
+  const entries: LeaderboardEntry[] = topEntries.map((entry, idx) => ({
+    rank: allScores.indexOf(entry) + 1,
+    name: entry.name,
+    score: entry.score,
+    isCurrentPlayer: 'isPlayer' in entry && entry.isPlayer
+  }))
+
+  return { entries, playerRank }
+}
+
+function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
 
   const handleShare = async () => {
+    const rankText = playerRank <= 5 ? `Ranked #${playerRank}! ` : ''
+
     // Try native share if available
     if (navigator.share) {
       try {
         await navigator.share({
           title: `${gameName} - Bloc Step Arcade`,
-          text: `I scored ${score.toLocaleString()} on ${gameName}! ${isNewHighScore ? 'New high score!' : ''} Play at Bloc Step Arcade`,
+          text: `I scored ${score.toLocaleString()} on ${gameName}! ${rankText}${isNewHighScore ? 'New high score! ' : ''}Play at Bloc Step Arcade`,
           url: window.location.origin,
         })
       } catch (e) {
@@ -46,7 +105,7 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, onClo
       }
     } else {
       // Fallback: copy to clipboard
-      const text = `I scored ${score.toLocaleString()} on ${gameName}! ${isNewHighScore ? 'New high score!' : ''} Play at Bloc Step Arcade ${window.location.origin}`
+      const text = `I scored ${score.toLocaleString()} on ${gameName}! ${rankText}${isNewHighScore ? 'New high score! ' : ''}Play at Bloc Step Arcade ${window.location.origin}`
       navigator.clipboard.writeText(text)
       alert('Copied to clipboard!')
     }
@@ -71,7 +130,7 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, onClo
           {/* Score */}
           <div className="bg-black/30 rounded-xl p-4 mb-4">
             <div className="text-center">
-              <div className="text-purple-300 text-sm mb-1">Score</div>
+              <div className="text-purple-300 text-sm mb-1">Your Score</div>
               <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
                 {score.toLocaleString()}
               </div>
@@ -83,15 +142,54 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, onClo
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="flex justify-between text-sm mb-4">
-            <div className="text-center flex-1">
-              <div className="text-purple-300">Best</div>
-              <div className="text-white font-bold">{highScore.toLocaleString()}</div>
+          {/* Leaderboard */}
+          <div className="bg-black/20 rounded-xl p-3 mb-4">
+            <div className="text-center text-xs font-bold text-purple-300 tracking-wider mb-3">
+              🏆 TOP PLAYERS
             </div>
-            <div className="text-center flex-1 border-l border-purple-700">
-              <div className="text-purple-300">Rank</div>
-              <div className="text-white font-bold">--</div>
+            <div className="space-y-1.5">
+              {leaderboard.map((entry) => (
+                <div
+                  key={entry.rank}
+                  className={`flex items-center justify-between text-sm px-2 py-1 rounded ${
+                    entry.isCurrentPlayer
+                      ? 'bg-yellow-500/20 border border-yellow-500/50'
+                      : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-5 text-center ${entry.isCurrentPlayer ? 'text-yellow-400' : 'text-purple-400'}`}>
+                      {entry.isCurrentPlayer ? '→' : ''}{entry.rank}.
+                    </span>
+                    <span className={entry.isCurrentPlayer ? 'text-yellow-300 font-bold' : 'text-white'}>
+                      {entry.name}
+                    </span>
+                  </div>
+                  <span className={entry.isCurrentPlayer ? 'text-yellow-300 font-bold' : 'text-purple-200'}>
+                    {entry.score.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Rank callout */}
+            {playerRank <= 5 && (
+              <div className="text-center mt-3 text-yellow-400 text-sm font-bold">
+                You ranked #{playerRank} in {gameName}!
+              </div>
+            )}
+            {playerRank > 5 && playerRank <= 10 && (
+              <div className="text-center mt-3 text-purple-300 text-sm">
+                You ranked #{playerRank} — keep playing!
+              </div>
+            )}
+          </div>
+
+          {/* Best Score */}
+          <div className="flex justify-center text-sm mb-4">
+            <div className="text-center">
+              <div className="text-purple-300">Personal Best</div>
+              <div className="text-white font-bold">{highScore.toLocaleString()}</div>
             </div>
           </div>
 
@@ -136,6 +234,8 @@ export function GameWrapper({
   const [timeLeft, setTimeLeft] = useState(900) // 15 minutes
   const [showShareCard, setShowShareCard] = useState(false)
   const [isNewHighScore, setIsNewHighScore] = useState(false)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [playerRank, setPlayerRank] = useState(0)
   const lastTapRef = useRef<number>(0)
   const doubleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -179,6 +279,12 @@ export function GameWrapper({
       localStorage.setItem(`highscore_${gameId}`, score.toString())
     }
     setIsNewHighScore(newHighScore)
+
+    // Generate leaderboard with current score
+    const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
+    setLeaderboard(entries)
+    setPlayerRank(rank)
+
     setGameState('gameover')
     setShowShareCard(true)
   }, [score, highScore, gameId])
@@ -236,6 +342,10 @@ export function GameWrapper({
 
   // Show share card during gameplay
   const openShareCard = () => {
+    // Generate leaderboard with current score for mid-game sharing
+    const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
+    setLeaderboard(entries)
+    setPlayerRank(rank)
     setShowShareCard(true)
   }
 
@@ -249,6 +359,8 @@ export function GameWrapper({
           score={score}
           highScore={Math.max(score, highScore)}
           isNewHighScore={isNewHighScore}
+          leaderboard={leaderboard}
+          playerRank={playerRank}
           onClose={handleShareClose}
           onShare={handleShareComplete}
         />
@@ -335,7 +447,12 @@ export function GameWrapper({
               <div className="badge badge-success mb-4">New High Score!</div>
             )}
             <button
-              onClick={() => setShowShareCard(true)}
+              onClick={() => {
+                const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
+                setLeaderboard(entries)
+                setPlayerRank(rank)
+                setShowShareCard(true)
+              }}
               className="btn btn-secondary btn-full mb-3"
             >
               Share Score

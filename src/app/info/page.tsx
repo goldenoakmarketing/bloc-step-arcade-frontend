@@ -114,7 +114,7 @@ export default function InfoPage() {
             <span>🌊</span> The Overflow
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
-            The Lost & Found pool has a cap of 250 quarters. When quarters overflow,
+            The Lost & Found pool has a cap of 2500 quarters. When quarters overflow,
             they don't disappear — they <span className="text-white">automatically</span> feed the ecosystem.
           </p>
           <div className="bg-zinc-900/50 rounded-lg p-3 text-sm">
@@ -156,6 +156,50 @@ export default function InfoPage() {
           </p>
         </div>
 
+        {/* Tipping & Social */}
+        <div className="card mb-4">
+          <h2 className="font-bold mb-3 flex items-center gap-2">
+            <span>💬</span> Tipping & Social
+          </h2>
+          <p className="text-sm text-muted leading-relaxed mb-3">
+            $BLOC isn't just arcade currency — it's a <span className="text-white">social token</span> built for community.
+            Tip players, support creators, show love.
+          </p>
+          <div className="bg-zinc-900/50 rounded-lg p-3 mb-3">
+            <div className="text-xs font-bold text-purple-400 tracking-wider mb-2">HOW TO TIP</div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-3">
+                <code className="bg-black/30 px-2 py-1 rounded text-cyan-400 text-xs">$BLOC 500</code>
+                <span className="text-muted">Send 500 $BLOC</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <code className="bg-black/30 px-2 py-1 rounded text-cyan-400 text-xs">$BLOC 2 dollars</code>
+                <span className="text-muted">Send 8 quarters (2 hours of gameplay)</span>
+              </div>
+            </div>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-3 mb-3 text-sm">
+            <div className="text-xs font-bold text-purple-400 tracking-wider mb-2">WHERE IT WORKS</div>
+            <ul className="text-muted space-y-1.5">
+              <li className="flex items-start gap-2">
+                <span className="text-cyan-400">•</span>
+                <span><span className="text-white">Farcaster</span> — tip posts you love in comments</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-cyan-400">•</span>
+                <span><span className="text-white">Direct transfers</span> — support players & creators</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-cyan-400">•</span>
+                <span><span className="text-white">No middleman</span> — tips go straight to them</span>
+              </li>
+            </ul>
+          </div>
+          <div className="text-center text-sm text-muted">
+            <span className="text-zinc-500">Play → Earn → Tip → Stake → Repeat</span>
+          </div>
+        </div>
+
         {/* The Vision */}
         <div className="card mb-4 border-[#8b5cf6]/30">
           <h2 className="font-bold mb-3 flex items-center gap-2">
@@ -163,15 +207,14 @@ export default function InfoPage() {
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
             Bloc Step isn't just an app. It's the foundation for a <span className="text-white">real-world economy</span> being
-            built on Base. The quarters, the games, the Lost & Found — they're all pieces of something bigger.
+            built on Base. The quarters, the games, the Lost & Found, the tips — they're all pieces of something bigger.
           </p>
           <p className="text-sm text-muted leading-relaxed mb-3">
-            We're not here to create another speculative token. We're here to build
-            infrastructure for <span className="text-white">local commerce, tipping culture, and community rewards</span> —
-            all powered by the simple, familiar concept of an arcade quarter.
+            $BLOC is <span className="text-white">the coin that connects players</span>. Not speculation — participation.
+            Quarters circulate, tips flow, community grows. Real usage drives real rewards.
           </p>
           <p className="text-sm text-muted leading-relaxed">
-            Play games. Tip creators. Transact locally. That's the future we're building, one bloc step at a time.
+            Play games. Tip creators. Support each other. That's the future we're building, one bloc step at a time.
           </p>
         </div>
 
@@ -197,7 +240,11 @@ export default function InfoPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-zinc-500">5.</span>
-              <span>We're building for the <span className="text-white">real world</span>, not speculators</span>
+              <span><span className="text-white">Tip</span> players and creators — no middleman</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-zinc-500">6.</span>
+              <span>We're building for <span className="text-white">community</span>, not speculators</span>
             </li>
           </ul>
         </div>
