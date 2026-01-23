@@ -11,20 +11,6 @@ export default function InfoPage() {
           <p className="text-muted text-sm">Building a real-world economy, one quarter at a time</p>
         </div>
 
-        {/* Not an Investment */}
-        <div className="card mb-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <h2 className="font-bold mb-2">This is Not an Investment</h2>
-              <p className="text-sm text-muted leading-relaxed">
-                Quarters are <span className="text-white">not designed to be an asset you profit from</span>.
-                They're arcade tokens — meant to be spent, shared, lost, and found.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* The Quarter */}
         <div className="card mb-4">
           <h2 className="font-bold mb-3 flex items-center gap-2">

@@ -384,7 +384,7 @@ export default function HomePage() {
         {/* BOTTOM CTA */}
         <div className="text-center mb-8">
           <p className="text-zinc-400 mb-6 text-lg">
-            Ready to find your fortune?
+            Ready to start playing?
           </p>
 
           <div className="flex gap-3 justify-center">
