@@ -6,7 +6,7 @@ interface CoinButtonProps {
   onClaim: (found: number) => void
 }
 
-const COOLDOWN_MS = 60 * 60 * 1000 // 1 hour in milliseconds
+const COOLDOWN_MS = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 const STORAGE_KEY = 'lostfound_lastclaim'
 
 export function CoinButton({ onClaim }: CoinButtonProps) {

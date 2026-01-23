@@ -1,19 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { GAMES, GameWrapper, getGameById } from '@/components/games'
 
 export default function PlayPage() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
   const [quarterBalance, setQuarterBalance] = useState(4)
+  const [timeRemaining, setTimeRemaining] = useState(0) // Shared time across all games
 
   const formatQuarters = (quarters: number) => {
     return `${quarters}Q`
   }
 
-  const handleUseQuarter = () => {
-    setQuarterBalance(prev => prev - 1)
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
+
+  // Buy time with a quarter (adds 15 minutes)
+  const handleBuyTime = useCallback(() => {
+    if (quarterBalance < 1) return false
+    setQuarterBalance(prev => prev - 1)
+    setTimeRemaining(prev => prev + 900) // Add 15 minutes
+    return true
+  }, [quarterBalance])
+
+  // Update time remaining (called by GameWrapper)
+  const handleTimeChange = useCallback((newTime: number) => {
+    setTimeRemaining(newTime)
+  }, [])
 
   // If a game is selected, show it
   if (selectedGame) {
@@ -32,7 +48,9 @@ export default function PlayPage() {
         gameIcon={game.meta.icon}
         onExit={() => setSelectedGame(null)}
         quarterBalance={quarterBalance}
-        onUseQuarter={handleUseQuarter}
+        timeRemaining={timeRemaining}
+        onTimeChange={handleTimeChange}
+        onBuyTime={handleBuyTime}
       >
         {(props) => <GameComponent {...props} />}
       </GameWrapper>
@@ -47,8 +65,11 @@ export default function PlayPage() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Arcade</h1>
           <p className="text-muted text-sm">Choose a game to play</p>
-          <div className="mt-4">
+          <div className="mt-4 flex justify-center gap-3">
             <span className="badge">{formatQuarters(quarterBalance)} available</span>
+            {timeRemaining > 0 && (
+              <span className="badge badge-success">{formatTime(timeRemaining)} remaining</span>
+            )}
           </div>
         </div>
 
@@ -84,8 +105,8 @@ export default function PlayPage() {
             <span className="text-xl">💡</span>
             <div className="text-sm">
               <p className="text-muted">
-                Each game costs <span className="text-white">1 quarter</span> (15 minutes).
-                Your high scores are saved locally.
+                <span className="text-white">1 quarter = 15 minutes</span> of arcade time.
+                Play as many games as you want while time remains!
               </p>
             </div>
           </div>

@@ -103,7 +103,7 @@ export default function InfoPage() {
             </div>
           </div>
           <p className="text-xs text-muted mt-3">
-            Players can check the Lost & Found once per hour to see if any quarters are waiting.
+            Players can check the Lost & Found once per day to see if any quarters are waiting.
             How many you find depends on luck and the pool's current state.
           </p>
         </div>

@@ -16,7 +16,9 @@ interface GameWrapperProps {
   children: (props: GameProps) => React.ReactNode
   onExit: () => void
   quarterBalance: number
-  onUseQuarter: () => void
+  timeRemaining: number
+  onTimeChange: (time: number) => void
+  onBuyTime: () => boolean
 }
 
 interface LeaderboardEntry {
@@ -113,8 +115,8 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leade
   }
 
   return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 pb-20 overflow-y-auto">
+      <div className="w-full max-w-sm my-auto">
         {/* Share Card */}
         <div
           ref={cardRef}
@@ -226,12 +228,13 @@ export function GameWrapper({
   children,
   onExit,
   quarterBalance,
-  onUseQuarter
+  timeRemaining,
+  onTimeChange,
+  onBuyTime
 }: GameWrapperProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(900) // 15 minutes
   const [showShareCard, setShowShareCard] = useState(false)
   const [isNewHighScore, setIsNewHighScore] = useState(false)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -244,23 +247,6 @@ export function GameWrapper({
     const saved = localStorage.getItem(`highscore_${gameId}`)
     if (saved) setHighScore(parseInt(saved))
   }, [gameId])
-
-  // Timer - pauses when share card is shown
-  useEffect(() => {
-    if (gameState !== 'playing' || showShareCard) return
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          handleGameOver()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [gameState, showShareCard])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -280,28 +266,43 @@ export function GameWrapper({
     }
     setIsNewHighScore(newHighScore)
 
-    // Generate leaderboard with current score
+    // Generate leaderboard with current score (for rank display)
     const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
     setLeaderboard(entries)
     setPlayerRank(rank)
 
     setGameState('gameover')
-    setShowShareCard(true)
+    // Don't auto-show share card - let user choose
   }, [score, highScore, gameId])
 
+  // Timer - counts down timeRemaining, pauses when share card is shown
+  useEffect(() => {
+    if (gameState !== 'playing' || showShareCard) return
+
+    const timer = setInterval(() => {
+      if (timeRemaining <= 1) {
+        onTimeChange(0)
+        handleGameOver()
+      } else {
+        onTimeChange(timeRemaining - 1)
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [gameState, showShareCard, timeRemaining, onTimeChange, handleGameOver])
+
   const startGame = () => {
-    if (quarterBalance < 1) return
-    onUseQuarter()
+    // If no time remaining, need to buy time first
+    if (timeRemaining <= 0) {
+      if (!onBuyTime()) return // Failed to buy time
+    }
     setScore(0)
-    setTimeLeft(900)
     setIsNewHighScore(false)
     setGameState('playing')
   }
 
-  const continueWithCredit = () => {
-    if (quarterBalance < 1) return
-    onUseQuarter()
-    setTimeLeft(prev => prev + 900) // Add 15 minutes
+  const addMoreTime = () => {
+    onBuyTime()
   }
 
   const togglePause = () => {
@@ -320,7 +321,7 @@ export function GameWrapper({
         doubleTapTimeoutRef.current = null
       }
       if (quarterBalance >= 1 && gameState === 'playing') {
-        continueWithCredit()
+        addMoreTime()
       }
     } else {
       // Single tap - wait to see if it's a double tap
@@ -378,10 +379,10 @@ export function GameWrapper({
           title={quarterBalance >= 1 ? "Double-tap to add 15 min" : "No quarters available"}
         >
           <div className="text-xs text-muted">{gameName}</div>
-          <div className={`text-xl font-bold ${timeLeft <= 60 ? 'text-red-500 animate-pulse' : ''}`}>
-            {formatTime(timeLeft)}
+          <div className={`text-xl font-bold ${timeRemaining <= 60 ? 'text-red-500 animate-pulse' : ''}`}>
+            {formatTime(timeRemaining)}
           </div>
-          {gameState === 'playing' && quarterBalance >= 1 && timeLeft <= 120 && (
+          {gameState === 'playing' && quarterBalance >= 1 && timeRemaining <= 120 && (
             <div className="text-xs text-green-500">tap x2 for +15min</div>
           )}
         </div>
@@ -397,14 +398,29 @@ export function GameWrapper({
           <div className="card text-center max-w-sm w-full">
             <div className="text-6xl mb-6">{gameIcon}</div>
             <h2 className="text-2xl font-bold mb-2">{gameName}</h2>
-            <p className="text-muted text-sm mb-6">Insert a quarter to play</p>
-            <button
-              onClick={startGame}
-              className="btn btn-primary btn-lg btn-full"
-              disabled={quarterBalance < 1}
-            >
-              Insert Quarter
-            </button>
+            {timeRemaining > 0 ? (
+              <>
+                <p className="text-muted text-sm mb-2">Ready to play</p>
+                <p className="text-green-500 text-sm mb-6">{formatTime(timeRemaining)} remaining</p>
+                <button
+                  onClick={startGame}
+                  className="btn btn-primary btn-lg btn-full"
+                >
+                  Play
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-muted text-sm mb-6">Insert a quarter to play</p>
+                <button
+                  onClick={startGame}
+                  className="btn btn-primary btn-lg btn-full"
+                  disabled={quarterBalance < 1}
+                >
+                  Insert Quarter
+                </button>
+              </>
+            )}
             <button
               onClick={onExit}
               className="btn btn-secondary btn-full mt-3"
@@ -431,38 +447,57 @@ export function GameWrapper({
               onScore: handleScore,
               onGameOver: handleGameOver,
               isPaused: gameState === 'paused' || showShareCard,
-              timeLeft,
+              timeLeft: timeRemaining,
             })}
           </div>
         )}
 
         {gameState === 'gameover' && !showShareCard && (
           <div className="card text-center max-w-sm w-full">
-            <h2 className="text-2xl font-bold mb-2">Game Over!</h2>
-            <div className="mb-6">
+            <div className="text-5xl mb-4">{gameIcon}</div>
+            <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
+            <div className="mb-4">
               <div className="text-muted text-sm">Final Score</div>
               <div className="text-4xl font-bold text-gradient">{score.toLocaleString()}</div>
             </div>
-            {isNewHighScore && score > 0 && (
-              <div className="badge badge-success mb-4">New High Score!</div>
+            {/* Rank/High Score callout */}
+            <div className="mb-6">
+              {isNewHighScore && score > 0 ? (
+                <div className="inline-block px-4 py-2 bg-yellow-500 text-black font-bold rounded-full text-lg">
+                  🏆 New High Score!
+                </div>
+              ) : playerRank === 1 ? (
+                <div className="text-yellow-400 text-xl font-bold">🥇 1st Place!</div>
+              ) : playerRank === 2 ? (
+                <div className="text-gray-300 text-xl font-bold">🥈 2nd Place!</div>
+              ) : playerRank === 3 ? (
+                <div className="text-orange-400 text-xl font-bold">🥉 3rd Place!</div>
+              ) : playerRank <= 5 ? (
+                <div className="text-purple-400 text-lg font-bold">#{playerRank} on the leaderboard!</div>
+              ) : (
+                <div className="text-muted text-lg">Ranked #{playerRank}</div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowShareCard(true)}
+                className="btn btn-primary btn-full"
+              >
+                Share
+              </button>
+              <button onClick={onExit} className="btn btn-secondary btn-full">
+                Continue
+              </button>
+            </div>
+            {/* Play Again - only show if time remains */}
+            {timeRemaining > 0 && (
+              <button
+                onClick={startGame}
+                className="btn btn-secondary btn-full mt-3 text-green-500 border-green-500/50"
+              >
+                Play Again ({formatTime(timeRemaining)} left)
+              </button>
             )}
-            <button
-              onClick={() => {
-                const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
-                setLeaderboard(entries)
-                setPlayerRank(rank)
-                setShowShareCard(true)
-              }}
-              className="btn btn-secondary btn-full mb-3"
-            >
-              Share Score
-            </button>
-            <button onClick={startGame} className="btn btn-primary btn-full" disabled={quarterBalance < 1}>
-              Play Again (1Q)
-            </button>
-            <button onClick={onExit} className="btn btn-secondary btn-full mt-3">
-              Back to Games
-            </button>
           </div>
         )}
       </div>
