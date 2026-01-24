@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { LOCALPAY_ENABLED } from '@/config/features'
 
 type LeaderboardType = 'lost' | 'staking' | 'time'
 
@@ -13,16 +14,21 @@ const tabs: { id: LeaderboardType; label: string }[] = [
 // Mock data for development
 // Identity types: localpay (.localpay), farcaster (@user), basens (user.base.eth)
 // anonymous = true means user chose to hide their identity (shows as Swayze)
+// Note: localpay entries are replaced when LOCALPAY_ENABLED is false
 const mockData = {
   lost: [
-    { rank: 1, name: 'generous.localpay', type: 'localpay', anonymous: false, score: '1,000 Q' },
+    LOCALPAY_ENABLED
+      ? { rank: 1, name: 'generous.localpay', type: 'localpay', anonymous: false, score: '1,000 Q' }
+      : { rank: 1, name: 'generous.base.eth', type: 'basens', anonymous: false, score: '1,000 Q' },
     { rank: 2, name: '@giver', type: 'farcaster', anonymous: false, score: '750 Q' },
     { rank: 3, name: null, type: null, anonymous: true, score: '500 Q' },
     { rank: 4, name: 'phil.base.eth', type: 'basens', anonymous: false, score: '250 Q' },
     { rank: 5, name: null, type: null, anonymous: true, score: '100 Q' },
   ],
   staking: [
-    { rank: 1, name: 'whale.localpay', type: 'localpay', anonymous: false, score: '5M BLOC' },
+    LOCALPAY_ENABLED
+      ? { rank: 1, name: 'whale.localpay', type: 'localpay', anonymous: false, score: '5M BLOC' }
+      : { rank: 1, name: 'whale.base.eth', type: 'basens', anonymous: false, score: '5M BLOC' },
     { rank: 2, name: null, type: null, anonymous: true, score: '2.5M BLOC' },
     { rank: 3, name: '@hodler', type: 'farcaster', anonymous: false, score: '1M BLOC' },
   ],

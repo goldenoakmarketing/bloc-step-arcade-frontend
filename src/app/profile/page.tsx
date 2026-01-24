@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { CoinButton } from '@/components/ui/CoinButton'
+import { StakingPanel } from '@/components/staking/StakingPanel'
+import { LOCALPAY_ENABLED } from '@/config/features'
 
 export default function ProfilePage() {
   const [purchaseAmount, setPurchaseAmount] = useState(4) // quarters
@@ -10,12 +12,12 @@ export default function ProfilePage() {
 
   // Mock data for development
   const [quarterBalance, setQuarterBalance] = useState(8)
-  const stakedBalance = '10,000'
   const totalLost = '200' // quarters lost
 
   // Mock linked accounts - nameserver-based identity
+  // localpay is disabled until LOCALPAY_ENABLED feature flag is true
   const linkedAccounts = {
-    localpay: 'player.localpay', // User's .localpay name
+    localpay: LOCALPAY_ENABLED ? 'player.localpay' : null,
     farcaster: '@player', // Farcaster username
     basens: null, // Not linked yet: would be 'player.base.eth'
   }
@@ -114,10 +116,12 @@ export default function ProfilePage() {
             {/* Localpay */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 text-lg">●</span>
+                <span className={LOCALPAY_ENABLED ? "text-emerald-400 text-lg" : "text-emerald-800 text-lg"}>●</span>
                 <span className="text-sm">.localpay</span>
               </div>
-              {linkedAccounts.localpay ? (
+              {!LOCALPAY_ENABLED ? (
+                <span className="text-emerald-700 text-sm">coming soon</span>
+              ) : linkedAccounts.localpay ? (
                 <span className="text-emerald-400 text-sm font-medium">{linkedAccounts.localpay}</span>
               ) : (
                 <button className="text-xs text-muted hover:text-white">Link</button>
@@ -233,46 +237,32 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="stat-card">
-            <div className="stat-label">Staked</div>
-            <div className="stat-value">{stakedBalance}</div>
-            <div className="text-xs text-muted">$BLOC</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Total Lost</div>
-            <div className="stat-value">{totalLost}</div>
-            <div className="text-xs text-muted">quarters</div>
-          </div>
+        {/* Staking Panel */}
+        <div className="mb-4">
+          <StakingPanel />
+        </div>
+
+        {/* Stats */}
+        <div className="stat-card mb-4">
+          <div className="stat-label">Total Lost</div>
+          <div className="stat-value">{totalLost}</div>
+          <div className="text-xs text-muted">quarters</div>
         </div>
 
         {/* Actions */}
-        <div className="space-y-3">
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">Stake $BLOC</div>
-                <div className="text-sm text-muted">Earn rewards</div>
-              </div>
-              <button className="btn btn-success">Stake</button>
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium">Lose a Quarter</div>
+              <div className="text-sm text-muted">Leave for others to find</div>
             </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">Lose a Quarter</div>
-                <div className="text-sm text-muted">Leave for others to find</div>
-              </div>
-              <button
-                className="btn btn-primary"
-                onClick={handleLose}
-                disabled={quarterBalance === 0}
-              >
-                Lose 1Q
-              </button>
-            </div>
+            <button
+              className="btn btn-primary"
+              onClick={handleLose}
+              disabled={quarterBalance === 0}
+            >
+              Lose 1Q
+            </button>
           </div>
         </div>
       </div>

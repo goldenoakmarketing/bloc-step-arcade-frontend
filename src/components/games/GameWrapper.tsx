@@ -49,7 +49,7 @@ function getMockLeaderboard(gameId: string, playerScore: number): { entries: Lea
     { name: 'Swayze', base: 15000 },
     { name: 'arcade.base', base: 12000 },
     { name: '@degenking', base: 9500 },
-    { name: '.localpay', base: 7000 },
+    { name: 'player.base.eth', base: 7000 },
     { name: '@arcadeboss', base: 5500 },
     { name: 'pixel.eth', base: 4000 },
     { name: '@quarterhoarder', base: 2500 },
