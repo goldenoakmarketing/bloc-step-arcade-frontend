@@ -40,52 +40,17 @@ interface ShareCardProps {
   onShare: () => void
 }
 
-// Mock leaderboard generator - inserts player score into fake data
-function getMockLeaderboard(gameId: string, playerScore: number): { entries: LeaderboardEntry[], playerRank: number } {
-  // Seeded "random" scores based on gameId for consistency
-  const seed = gameId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+// Get leaderboard data - TODO: fetch from backend
+function getLeaderboard(gameId: string, playerScore: number): { entries: LeaderboardEntry[], playerRank: number } {
+  // Only show the player's score until backend leaderboard is ready
+  const entries: LeaderboardEntry[] = [{
+    rank: 1,
+    name: 'You',
+    score: playerScore,
+    isCurrentPlayer: true
+  }]
 
-  const mockPlayers = [
-    { name: 'Swayze', base: 15000 },
-    { name: 'arcade.base', base: 12000 },
-    { name: '@degenking', base: 9500 },
-    { name: 'player.base.eth', base: 7000 },
-    { name: '@arcadeboss', base: 5500 },
-    { name: 'pixel.eth', base: 4000 },
-    { name: '@quarterhoarder', base: 2500 },
-  ]
-
-  // Generate scores with some variation based on game
-  const mockScores = mockPlayers.map(p => ({
-    name: p.name,
-    score: Math.floor(p.base * (0.8 + (seed % 100) / 200))
-  }))
-
-  // Add player score
-  const allScores = [...mockScores, { name: 'You', score: playerScore, isPlayer: true }]
-
-  // Sort by score descending
-  allScores.sort((a, b) => b.score - a.score)
-
-  // Find player rank
-  const playerRank = allScores.findIndex(s => 'isPlayer' in s && s.isPlayer) + 1
-
-  // Take top 5, but ensure player is included if in top 7
-  let topEntries = allScores.slice(0, 5)
-
-  // If player is ranked 6-7, show top 4 + player
-  if (playerRank > 5 && playerRank <= 7) {
-    topEntries = [...allScores.slice(0, 4), allScores[playerRank - 1]]
-  }
-
-  const entries: LeaderboardEntry[] = topEntries.map((entry, idx) => ({
-    rank: allScores.indexOf(entry) + 1,
-    name: entry.name,
-    score: entry.score,
-    isCurrentPlayer: 'isPlayer' in entry && entry.isPlayer
-  }))
-
-  return { entries, playerRank }
+  return { entries, playerRank: 1 }
 }
 
 function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare }: ShareCardProps) {
@@ -267,7 +232,7 @@ export function GameWrapper({
     setIsNewHighScore(newHighScore)
 
     // Generate leaderboard with current score (for rank display)
-    const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
+    const { entries, playerRank: rank } = getLeaderboard(gameId, score)
     setLeaderboard(entries)
     setPlayerRank(rank)
 
@@ -344,7 +309,7 @@ export function GameWrapper({
   // Show share card during gameplay
   const openShareCard = () => {
     // Generate leaderboard with current score for mid-game sharing
-    const { entries, playerRank: rank } = getMockLeaderboard(gameId, score)
+    const { entries, playerRank: rank } = getLeaderboard(gameId, score)
     setLeaderboard(entries)
     setPlayerRank(rank)
     setShowShareCard(true)

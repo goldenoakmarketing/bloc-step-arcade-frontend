@@ -10,16 +10,15 @@ export default function ProfilePage() {
   const [customAmount, setCustomAmount] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false) // Swayze mode
 
-  // Mock data for development
-  const [quarterBalance, setQuarterBalance] = useState(8)
-  const totalLost = '200' // quarters lost
+  // User data - will come from backend/wallet
+  const [quarterBalance, setQuarterBalance] = useState(0)
+  const totalLost = '0'
 
-  // Mock linked accounts - nameserver-based identity
-  // localpay is disabled until LOCALPAY_ENABLED feature flag is true
+  // Linked accounts - will come from backend
   const linkedAccounts = {
-    localpay: LOCALPAY_ENABLED ? 'player.localpay' : null,
-    farcaster: '@player', // Farcaster username
-    basens: null, // Not linked yet: would be 'player.base.eth'
+    localpay: null,
+    farcaster: null,
+    basens: null,
   }
 
   const formatQuarters = (quarters: number) => {

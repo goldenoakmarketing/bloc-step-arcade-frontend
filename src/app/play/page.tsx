@@ -5,7 +5,7 @@ import { GAMES, GameWrapper, getGameById } from '@/components/games'
 
 export default function PlayPage() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
-  const [quarterBalance, setQuarterBalance] = useState(4)
+  const [quarterBalance, setQuarterBalance] = useState(0)
   const [timeRemaining, setTimeRemaining] = useState(0) // Shared time across all games
 
   const formatQuarters = (quarters: number) => {

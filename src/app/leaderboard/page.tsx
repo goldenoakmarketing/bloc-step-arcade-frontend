@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { LOCALPAY_ENABLED } from '@/config/features'
 
 type LeaderboardType = 'lost' | 'staking' | 'time'
 
@@ -11,37 +10,16 @@ const tabs: { id: LeaderboardType; label: string }[] = [
   { id: 'time', label: 'Time Played' },
 ]
 
-// Mock data for development
-// Identity types: localpay (.localpay), farcaster (@user), basens (user.base.eth)
-// anonymous = true means user chose to hide their identity (shows as Swayze)
-// Note: localpay entries are replaced when LOCALPAY_ENABLED is false
-const mockData = {
-  lost: [
-    LOCALPAY_ENABLED
-      ? { rank: 1, name: 'generous.localpay', type: 'localpay', anonymous: false, score: '1,000 Q' }
-      : { rank: 1, name: 'generous.base.eth', type: 'basens', anonymous: false, score: '1,000 Q' },
-    { rank: 2, name: '@giver', type: 'farcaster', anonymous: false, score: '750 Q' },
-    { rank: 3, name: null, type: null, anonymous: true, score: '500 Q' },
-    { rank: 4, name: 'phil.base.eth', type: 'basens', anonymous: false, score: '250 Q' },
-    { rank: 5, name: null, type: null, anonymous: true, score: '100 Q' },
-  ],
-  staking: [
-    LOCALPAY_ENABLED
-      ? { rank: 1, name: 'whale.localpay', type: 'localpay', anonymous: false, score: '5M BLOC' }
-      : { rank: 1, name: 'whale.base.eth', type: 'basens', anonymous: false, score: '5M BLOC' },
-    { rank: 2, name: null, type: null, anonymous: true, score: '2.5M BLOC' },
-    { rank: 3, name: '@hodler', type: 'farcaster', anonymous: false, score: '1M BLOC' },
-  ],
-  time: [
-    { rank: 1, name: 'gamer.base.eth', type: 'basens', anonymous: false, score: '200 Q' },
-    { rank: 2, name: null, type: null, anonymous: true, score: '150 Q' },
-    { rank: 3, name: '@dedicated', type: 'farcaster', anonymous: false, score: '100 Q' },
-  ],
+// Leaderboard data - will come from backend
+const leaderboardData: Record<LeaderboardType, { rank: number; name: string | null; type: string | null; anonymous: boolean; score: string }[]> = {
+  lost: [],
+  staking: [],
+  time: [],
 }
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('lost')
-  const entries = mockData[activeTab]
+  const entries = leaderboardData[activeTab]
 
   const getRankDisplay = (rank: number) => {
     if (rank === 1) return '🥇'
@@ -87,35 +65,42 @@ export default function LeaderboardPage() {
 
         {/* List */}
         <div className="card">
-          <div className="divide-y divide-[#27272a]">
-            {entries.map((entry, idx) => (
-              <div key={idx} className="leaderboard-row">
-                <div className="w-12 text-lg">
-                  {getRankDisplay(entry.rank)}
+          {entries.length === 0 ? (
+            <div className="text-center py-8 text-muted">
+              <p>No entries yet</p>
+              <p className="text-xs mt-1">Be the first on the leaderboard!</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#27272a]">
+              {entries.map((entry, idx) => (
+                <div key={idx} className="leaderboard-row">
+                  <div className="w-12 text-lg">
+                    {getRankDisplay(entry.rank)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {entry.anonymous ? (
+                      <div className="flex items-center gap-1.5 text-zinc-600">
+                        <span>👻</span>
+                        <span className="italic">Swayze</span>
+                      </div>
+                    ) : (
+                      <div className="font-medium truncate flex items-center gap-1.5">
+                        {entry.type === 'farcaster' && <span className="text-purple-400">{entry.name}</span>}
+                        {entry.type === 'localpay' && <span className="text-emerald-400">{entry.name}</span>}
+                        {entry.type === 'basens' && <span className="text-blue-400">{entry.name}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right font-bold">
+                    {entry.score}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  {entry.anonymous ? (
-                    <div className="flex items-center gap-1.5 text-zinc-600">
-                      <span>👻</span>
-                      <span className="italic">Swayze</span>
-                    </div>
-                  ) : (
-                    <div className="font-medium truncate flex items-center gap-1.5">
-                      {entry.type === 'farcaster' && <span className="text-purple-400">{entry.name}</span>}
-                      {entry.type === 'localpay' && <span className="text-emerald-400">{entry.name}</span>}
-                      {entry.type === 'basens' && <span className="text-blue-400">{entry.name}</span>}
-                    </div>
-                  )}
-                </div>
-                <div className="text-right font-bold">
-                  {entry.score}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Your Stats - mock */}
+        {/* Your Stats */}
         <div className="card mt-4">
           <div className="flex justify-between items-center">
             <div>

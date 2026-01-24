@@ -57,10 +57,10 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
     const audio = new Audio('/sounds/coins.mp3')
     audio.play().catch(() => {})
 
-    // Simulate checking the pool - result comes back after delay
+    // Check the pool - result comes back after delay
     setTimeout(() => {
-      // Mock: randomly find 0-4 quarters (in real app, this comes from backend)
-      const found = Math.floor(Math.random() * 5)
+      // TODO: Call backend API to check for claimable quarters
+      const found = 0
       setLastFound(found)
 
       // Set cooldown regardless of whether coins were found
