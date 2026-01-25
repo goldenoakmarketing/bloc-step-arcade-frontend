@@ -5,8 +5,12 @@ import { formatUnits, encodeFunctionData, concat } from 'viem'
 import { contracts, blocTokenAbi, arcadeVaultAbi } from '@/config/contracts'
 import { DATA_SUFFIX } from '@/config/builder'
 
+// BLOC token has 9 decimals
+const BLOC_DECIMALS = 9
+
 // 1 quarter = 250 BLOC, duration = 900 seconds (15 min)
-const QUARTER_AMOUNT = BigInt(250) * BigInt(10 ** 18) // 250 BLOC in wei
+const BLOC_PER_QUARTER = 250
+const QUARTER_AMOUNT = BigInt(BLOC_PER_QUARTER) * BigInt(10 ** BLOC_DECIMALS) // 250 BLOC in smallest unit
 const QUARTER_DURATION = 900 // 15 minutes in seconds
 
 export function useQuarters() {
@@ -104,24 +108,26 @@ export function useQuarters() {
     })
   }
 
-  // Convert time balance (seconds) to quarters
-  const timeToQuarters = (seconds: bigint | undefined): number => {
-    if (!seconds) return 0
-    return Math.floor(Number(seconds) / QUARTER_DURATION)
+  // Convert BLOC balance to quarters (1 quarter = 250 BLOC)
+  const blocToQuarters = (blocBalance: bigint | undefined): number => {
+    if (!blocBalance) return 0
+    // blocBalance is in smallest units (9 decimals), QUARTER_AMOUNT is 250 * 10^9
+    return Math.floor(Number(blocBalance / QUARTER_AMOUNT))
   }
 
   // Format helpers
   const formatBloc = (value: bigint | undefined): string => {
     if (!value) return '0.00'
-    return Number(formatUnits(value, 18)).toLocaleString('en-US', {
+    return Number(formatUnits(value, BLOC_DECIMALS)).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
   }
 
-  const formatTime = (seconds: bigint | undefined): string => {
-    if (!seconds) return '0m'
-    const totalMinutes = Math.floor(Number(seconds) / 60)
+  // Format time from quarters (each quarter = 15 minutes)
+  const formatTimeFromQuarters = (quarters: number): string => {
+    if (quarters <= 0) return '0m'
+    const totalMinutes = quarters * 15
     const hours = Math.floor(totalMinutes / 60)
     const mins = totalMinutes % 60
     if (hours > 0) {
@@ -129,6 +135,9 @@ export function useQuarters() {
     }
     return `${mins}m`
   }
+
+  // Calculate quarter balance from BLOC balance
+  const quarterBalance = blocToQuarters(blocBalance)
 
   return {
     // Connection state
@@ -141,9 +150,9 @@ export function useQuarters() {
     allowance,
 
     // Computed values
-    quarterBalance: timeToQuarters(timeBalance),
+    quarterBalance,
     formattedBlocBalance: formatBloc(blocBalance),
-    formattedTimeBalance: formatTime(timeBalance),
+    formattedTimeBalance: formatTimeFromQuarters(quarterBalance),
 
     // Transaction states
     isApprovePending,
@@ -163,12 +172,14 @@ export function useQuarters() {
     needsApproval,
     hasSufficientBalance,
     formatBloc,
-    formatTime,
-    timeToQuarters,
+    formatTimeFromQuarters,
+    blocToQuarters,
 
     // Constants
     QUARTER_AMOUNT,
     QUARTER_DURATION,
+    BLOC_DECIMALS,
+    BLOC_PER_QUARTER,
 
     // Reset functions
     resetApprove,

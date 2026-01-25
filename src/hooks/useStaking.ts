@@ -5,6 +5,9 @@ import { parseUnits, formatUnits, encodeFunctionData, concat } from 'viem'
 import { contracts, blocTokenAbi, stakingPoolAbi } from '@/config/contracts'
 import { DATA_SUFFIX } from '@/config/builder'
 
+// BLOC token has 9 decimals
+const BLOC_DECIMALS = 9
+
 export function useStaking() {
   const { address, isConnected } = useAccount()
 
@@ -132,7 +135,7 @@ export function useStaking() {
   // Format helpers
   const formatBloc = (value: bigint | undefined) => {
     if (!value) return '0.00'
-    return Number(formatUnits(value, 18)).toLocaleString('en-US', {
+    return Number(formatUnits(value, BLOC_DECIMALS)).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
@@ -140,7 +143,7 @@ export function useStaking() {
 
   const parseBloc = (value: string) => {
     try {
-      return parseUnits(value, 18)
+      return parseUnits(value, BLOC_DECIMALS)
     } catch {
       return BigInt(0)
     }

@@ -14,8 +14,11 @@ const BLOC = '0x022c6cb9Fd69A99cF030cB43e3c28BF82bF68Fe9' as const
 // Pool fee tier (0.3% = 3000, 1% = 10000) - using 1% for smaller tokens
 const POOL_FEE = 10000
 
+// BLOC token has 9 decimals
+const BLOC_DECIMALS = 9
+
 // 1 quarter = 250 BLOC
-const BLOC_PER_QUARTER = BigInt(250) * BigInt(10 ** 18)
+const BLOC_PER_QUARTER = BigInt(250) * BigInt(10 ** BLOC_DECIMALS)
 
 // Debug logging
 const DEBUG = true
@@ -145,7 +148,7 @@ export function useSwapEthForBloc() {
     setQuoteError(null)
 
     const blocAmount = BLOC_PER_QUARTER * BigInt(quarters)
-    log('Getting quote for', quarters, 'quarters =', formatUnits(blocAmount, 18), 'BLOC')
+    log('Getting quote for', quarters, 'quarters =', formatUnits(blocAmount, BLOC_DECIMALS), 'BLOC')
 
     try {
       // First try using wagmi's publicClient
@@ -361,7 +364,7 @@ export function useSwapEthForBloc() {
 
   const formatBlocAmount = (): string => {
     if (!quote) return '...'
-    return Number(formatUnits(quote.blocAmount, 18)).toLocaleString()
+    return Number(formatUnits(quote.blocAmount, BLOC_DECIMALS)).toLocaleString()
   }
 
   return {

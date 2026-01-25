@@ -89,14 +89,14 @@ export function StakingPanel() {
 
   const handleMaxStake = () => {
     if (blocBalance) {
-      const formatted = (Number(blocBalance) / 1e18).toString()
+      const formatted = (Number(blocBalance) / 1e9).toString()
       setStakeAmount(formatted)
     }
   }
 
   const handleMaxUnstake = () => {
     if (stakedBalance) {
-      const formatted = (Number(stakedBalance) / 1e18).toString()
+      const formatted = (Number(stakedBalance) / 1e9).toString()
       setUnstakeAmount(formatted)
     }
   }
