@@ -2,19 +2,28 @@
 
 import { useState } from 'react'
 import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, usePublicClient } from 'wagmi'
-import { formatEther, formatUnits, encodeFunctionData, concat, decodeFunctionResult } from 'viem'
+import { formatEther, formatUnits, encodeFunctionData, encodeAbiParameters, parseAbiParameters, concat, decodeFunctionResult, toHex } from 'viem'
 import { DATA_SUFFIX } from '@/config/builder'
 
-// Uniswap V3 addresses on Base
-const UNISWAP_QUOTER_V2 = '0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a' as const
-const UNISWAP_SWAP_ROUTER_02 = '0x2626664c2603336E57B271c5C0b26F421741e481' as const
-const WETH = '0x4200000000000000000000000000000000000006' as const
+// Uniswap V4 addresses on Base mainnet
+const UNISWAP_V4_QUOTER = '0x0d5e0f971ed27fbff6c2837bf31316121532048d' as const
+const UNISWAP_UNIVERSAL_ROUTER = '0x6ff5693b99212da76ad316178a184ab56d299b43' as const
+const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3' as const
+
+// Token addresses - native ETH is address(0) in V4
+const NATIVE_ETH = '0x0000000000000000000000000000000000000000' as const
 const BLOC = '0x022c6cb9Fd69A99cF030cB43e3c28BF82bF68Fe9' as const
 
-// Pool fee tiers to try (in order of preference)
-// 1% = 10000, 0.3% = 3000, 0.05% = 500
-const POOL_FEES = [10000, 3000, 500] as const
-let ACTIVE_POOL_FEE = 10000 // Will be updated when a working pool is found
+// Pool configuration - ETH is currency0 (lower address), BLOC is currency1
+// We'll try different fee tiers to find the pool
+const POOL_CONFIGS = [
+  { fee: 10000, tickSpacing: 200 },  // 1%
+  { fee: 3000, tickSpacing: 60 },    // 0.3%
+  { fee: 500, tickSpacing: 10 },     // 0.05%
+  { fee: 100, tickSpacing: 1 },      // 0.01%
+] as const
+
+let ACTIVE_POOL_CONFIG = POOL_CONFIGS[0]
 
 // BLOC token has 18 decimals (standard ERC20)
 const BLOC_DECIMALS = 18
@@ -24,19 +33,30 @@ const BLOC_PER_QUARTER = BigInt(250) * BigInt(10 ** BLOC_DECIMALS)
 
 // Debug logging
 const DEBUG = true
-const log = (...args: unknown[]) => DEBUG && console.log('[useSwapEthForBloc]', ...args)
+const log = (...args: unknown[]) => DEBUG && console.log('[useSwapEthForBloc V4]', ...args)
 
-// QuoterV2 ABI for quoteExactOutputSingle
-const quoterAbi = [
+// V4 Quoter ABI for quoteExactOutputSingle
+// QuoteExactSingleParams: { poolKey, zeroForOne, exactAmount, hookData }
+// PoolKey: { currency0, currency1, fee, tickSpacing, hooks }
+const quoterV4Abi = [
   {
     inputs: [
       {
         components: [
-          { name: 'tokenIn', type: 'address' },
-          { name: 'tokenOut', type: 'address' },
-          { name: 'amount', type: 'uint256' },
-          { name: 'fee', type: 'uint24' },
-          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+          {
+            components: [
+              { name: 'currency0', type: 'address' },
+              { name: 'currency1', type: 'address' },
+              { name: 'fee', type: 'uint24' },
+              { name: 'tickSpacing', type: 'int24' },
+              { name: 'hooks', type: 'address' },
+            ],
+            name: 'poolKey',
+            type: 'tuple',
+          },
+          { name: 'zeroForOne', type: 'bool' },
+          { name: 'exactAmount', type: 'uint128' },
+          { name: 'hookData', type: 'bytes' },
         ],
         name: 'params',
         type: 'tuple',
@@ -45,8 +65,37 @@ const quoterAbi = [
     name: 'quoteExactOutputSingle',
     outputs: [
       { name: 'amountIn', type: 'uint256' },
-      { name: 'sqrtPriceX96After', type: 'uint160' },
-      { name: 'initializedTicksCrossed', type: 'uint32' },
+      { name: 'gasEstimate', type: 'uint256' },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        components: [
+          {
+            components: [
+              { name: 'currency0', type: 'address' },
+              { name: 'currency1', type: 'address' },
+              { name: 'fee', type: 'uint24' },
+              { name: 'tickSpacing', type: 'int24' },
+              { name: 'hooks', type: 'address' },
+            ],
+            name: 'poolKey',
+            type: 'tuple',
+          },
+          { name: 'zeroForOne', type: 'bool' },
+          { name: 'exactAmount', type: 'uint128' },
+          { name: 'hookData', type: 'bytes' },
+        ],
+        name: 'params',
+        type: 'tuple',
+      },
+    ],
+    name: 'quoteExactInputSingle',
+    outputs: [
+      { name: 'amountOut', type: 'uint256' },
       { name: 'gasEstimate', type: 'uint256' },
     ],
     stateMutability: 'nonpayable',
@@ -54,56 +103,39 @@ const quoterAbi = [
   },
 ] as const
 
-// SwapRouter02 ABI for exactOutputSingle
-const swapRouterAbi = [
+// Universal Router command codes
+const COMMANDS = {
+  V4_SWAP: 0x10,
+  WRAP_ETH: 0x0b,
+  UNWRAP_WETH: 0x0c,
+} as const
+
+// V4 Router action codes
+const ACTIONS = {
+  SWAP_EXACT_IN_SINGLE: 6,
+  SWAP_EXACT_IN: 7,
+  SWAP_EXACT_OUT_SINGLE: 8,
+  SWAP_EXACT_OUT: 9,
+  SETTLE: 11,
+  SETTLE_ALL: 12,
+  SETTLE_PAIR: 13,
+  TAKE: 14,
+  TAKE_ALL: 15,
+  TAKE_PORTION: 16,
+  TAKE_PAIR: 17,
+  CLOSE_CURRENCY: 18,
+  SWEEP: 20,
+} as const
+
+// Universal Router ABI
+const universalRouterAbi = [
   {
     inputs: [
-      {
-        components: [
-          { name: 'tokenIn', type: 'address' },
-          { name: 'tokenOut', type: 'address' },
-          { name: 'fee', type: 'uint24' },
-          { name: 'recipient', type: 'address' },
-          { name: 'amountOut', type: 'uint256' },
-          { name: 'amountInMaximum', type: 'uint256' },
-          { name: 'sqrtPriceLimitX96', type: 'uint160' },
-        ],
-        name: 'params',
-        type: 'tuple',
-      },
-    ],
-    name: 'exactOutputSingle',
-    outputs: [{ name: 'amountIn', type: 'uint256' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'amountMinimum', type: 'uint256' }],
-    name: 'unwrapWETH9',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [{ name: 'deadline', type: 'uint256' }],
-    name: 'multicall',
-    outputs: [{ name: '', type: 'bytes[]' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
+      { name: 'commands', type: 'bytes' },
+      { name: 'inputs', type: 'bytes[]' },
       { name: 'deadline', type: 'uint256' },
-      { name: 'data', type: 'bytes[]' },
     ],
-    name: 'multicall',
-    outputs: [{ name: '', type: 'bytes[]' }],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'refundETH',
+    name: 'execute',
     outputs: [],
     stateMutability: 'payable',
     type: 'function',
@@ -139,43 +171,59 @@ export function useSwapEthForBloc() {
     hash: swapTxHash,
   })
 
-  // Try to get quote with a specific fee tier
-  const tryQuoteWithFee = async (blocAmount: bigint, fee: number): Promise<bigint | null> => {
-    log('Trying fee tier:', fee)
+  // Build PoolKey for ETH/BLOC pool
+  const buildPoolKey = (config: typeof POOL_CONFIGS[number]) => ({
+    currency0: NATIVE_ETH,
+    currency1: BLOC,
+    fee: config.fee,
+    tickSpacing: config.tickSpacing,
+    hooks: '0x0000000000000000000000000000000000000000' as const, // No hooks
+  })
+
+  // Try to get quote with a specific pool config
+  const tryQuoteWithConfig = async (blocAmount: bigint, config: typeof POOL_CONFIGS[number]): Promise<bigint | null> => {
+    log('Trying pool config:', config)
+
+    const poolKey = buildPoolKey(config)
+    log('Pool key:', poolKey)
+
+    // ETH -> BLOC means zeroForOne = true (swapping currency0 for currency1)
+    const quoteParams = {
+      poolKey,
+      zeroForOne: true,
+      exactAmount: blocAmount,
+      hookData: '0x' as const,
+    }
 
     const callData = encodeFunctionData({
-      abi: quoterAbi,
+      abi: quoterV4Abi,
       functionName: 'quoteExactOutputSingle',
-      args: [{
-        tokenIn: WETH,
-        tokenOut: BLOC,
-        amount: blocAmount,
-        fee,
-        sqrtPriceLimitX96: BigInt(0),
-      }],
+      args: [quoteParams],
     })
 
     try {
       if (publicClient) {
+        log('Calling V4 Quoter at:', UNISWAP_V4_QUOTER)
+
         const result = await publicClient.call({
-          to: UNISWAP_QUOTER_V2,
+          to: UNISWAP_V4_QUOTER,
           data: callData,
         })
 
         if (!result.data) {
-          log('No data returned for fee', fee)
+          log('No data returned for config', config)
           return null
         }
 
         const decoded = decodeFunctionResult({
-          abi: quoterAbi,
+          abi: quoterV4Abi,
           functionName: 'quoteExactOutputSingle',
           data: result.data,
         })
 
         const ethRequired = decoded[0] as bigint
-        log('Fee', fee, 'succeeded! ETH required:', formatEther(ethRequired))
-        ACTIVE_POOL_FEE = fee
+        log('Config', config.fee, 'succeeded! ETH required:', formatEther(ethRequired))
+        ACTIVE_POOL_CONFIG = config
         return ethRequired
       } else {
         // Fallback to direct RPC call
@@ -187,7 +235,7 @@ export function useSwapEthForBloc() {
             id: 1,
             method: 'eth_call',
             params: [
-              { to: UNISWAP_QUOTER_V2, data: callData },
+              { to: UNISWAP_V4_QUOTER, data: callData },
               'latest',
             ],
           }),
@@ -196,23 +244,23 @@ export function useSwapEthForBloc() {
         const result = await response.json()
 
         if (result.error || !result.result || result.result === '0x') {
-          log('Fee', fee, 'failed:', result.error?.message || 'empty result')
+          log('Config', config.fee, 'failed:', result.error?.message || 'empty result')
           return null
         }
 
         const decoded = decodeFunctionResult({
-          abi: quoterAbi,
+          abi: quoterV4Abi,
           functionName: 'quoteExactOutputSingle',
           data: result.result,
         })
 
         const ethRequired = decoded[0] as bigint
-        log('Fee', fee, 'succeeded! ETH required:', formatEther(ethRequired))
-        ACTIVE_POOL_FEE = fee
+        log('Config', config.fee, 'succeeded! ETH required:', formatEther(ethRequired))
+        ACTIVE_POOL_CONFIG = config
         return ethRequired
       }
     } catch (err) {
-      log('Fee', fee, 'error:', err instanceof Error ? err.message : 'unknown')
+      log('Config', config.fee, 'error:', err instanceof Error ? err.message : 'unknown')
       return null
     }
   }
@@ -228,31 +276,31 @@ export function useSwapEthForBloc() {
     setQuoteError(null)
 
     const blocAmount = BLOC_PER_QUARTER * BigInt(quarters)
-    log('Getting quote for', quarters, 'quarters =', formatUnits(blocAmount, BLOC_DECIMALS), 'BLOC')
-    log('Quoter address:', UNISWAP_QUOTER_V2)
-    log('WETH:', WETH, 'BLOC:', BLOC)
-    log('Will try fee tiers:', POOL_FEES)
+    log('Getting V4 quote for', quarters, 'quarters =', formatUnits(blocAmount, BLOC_DECIMALS), 'BLOC')
+    log('V4 Quoter address:', UNISWAP_V4_QUOTER)
+    log('ETH (currency0):', NATIVE_ETH, 'BLOC (currency1):', BLOC)
+    log('Will try pool configs:', POOL_CONFIGS.map(c => `${c.fee/10000}%`).join(', '))
 
     try {
-      // Try each fee tier until one works
+      // Try each pool config until one works
       let ethRequired: bigint | null = null
 
-      for (const fee of POOL_FEES) {
-        ethRequired = await tryQuoteWithFee(blocAmount, fee)
+      for (const config of POOL_CONFIGS) {
+        ethRequired = await tryQuoteWithConfig(blocAmount, config)
         if (ethRequired !== null) {
           break
         }
       }
 
       if (ethRequired === null) {
-        throw new Error('No liquidity pool found for any fee tier')
+        throw new Error('No V4 liquidity pool found for ETH/BLOC at any fee tier')
       }
 
       // Add 5% slippage buffer
       const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
 
       log('ETH required:', formatEther(ethRequired), 'with slippage:', formatEther(ethWithSlippage))
-      log('Using fee tier:', ACTIVE_POOL_FEE)
+      log('Using pool config:', ACTIVE_POOL_CONFIG.fee/10000, '%')
 
       setQuote({
         ethRequired: ethWithSlippage,
@@ -262,14 +310,14 @@ export function useSwapEthForBloc() {
 
       return ethWithSlippage
     } catch (err) {
-      console.error('Quote error:', err)
+      console.error('V4 Quote error:', err)
       log('Quote error details:', err)
 
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       if (errorMessage.includes('liquidity') || errorMessage.includes('pool')) {
-        setQuoteError('No liquidity pool found for BLOC/ETH')
+        setQuoteError('No V4 liquidity pool found for ETH/BLOC')
       } else {
-        setQuoteError('Failed to get price quote: ' + errorMessage)
+        setQuoteError('Failed to get V4 price quote: ' + errorMessage)
       }
 
       setQuote(null)
@@ -279,7 +327,7 @@ export function useSwapEthForBloc() {
     }
   }
 
-  // Execute swap
+  // Execute swap via Universal Router
   const handleSwap = async (quarters: number) => {
     if (!address) {
       setQuoteError('Wallet not connected')
@@ -300,45 +348,76 @@ export function useSwapEthForBloc() {
       return
     }
 
-    const recipient = address
-
     // Deadline 20 minutes from now
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200)
 
-    // Encode exactOutputSingle call using the fee tier that worked during quote
-    log('Executing swap with fee tier:', ACTIVE_POOL_FEE)
-    const swapCalldata = encodeFunctionData({
-      abi: swapRouterAbi,
-      functionName: 'exactOutputSingle',
-      args: [{
-        tokenIn: WETH,
-        tokenOut: BLOC,
-        fee: ACTIVE_POOL_FEE,
-        recipient: recipient,
-        amountOut: blocAmount,
-        amountInMaximum: ethToSend,
-        sqrtPriceLimitX96: BigInt(0),
-      }],
+    log('Executing V4 swap via Universal Router')
+    log('ETH to send:', formatEther(ethToSend))
+    log('BLOC to receive:', formatUnits(blocAmount, BLOC_DECIMALS))
+    log('Pool config:', ACTIVE_POOL_CONFIG)
+
+    // Build the V4_SWAP command
+    // Actions sequence: SWAP_EXACT_OUT_SINGLE, SETTLE_ALL, TAKE_ALL
+    const actions = concat([
+      toHex(ACTIONS.SWAP_EXACT_OUT_SINGLE, { size: 1 }),
+      toHex(ACTIONS.SETTLE_ALL, { size: 1 }),
+      toHex(ACTIONS.TAKE_ALL, { size: 1 }),
+    ])
+
+    const poolKey = buildPoolKey(ACTIVE_POOL_CONFIG)
+
+    // Encode ExactOutputSingleParams for the swap
+    // struct ExactOutputSingleParams { PoolKey poolKey, bool zeroForOne, uint128 amountOut, uint128 amountInMaximum, bytes hookData }
+    const swapParams = encodeAbiParameters(
+      parseAbiParameters('(address,address,uint24,int24,address) poolKey, bool zeroForOne, uint128 amountOut, uint128 amountInMaximum, bytes hookData'),
+      [
+        [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hooks],
+        true, // zeroForOne: ETH -> BLOC
+        blocAmount,
+        ethToSend,
+        '0x',
+      ]
+    )
+
+    // Encode SETTLE_ALL params (currency, maxAmount)
+    // For native ETH, we're settling with the ETH we sent
+    const settleParams = encodeAbiParameters(
+      parseAbiParameters('address currency, uint128 maxAmount'),
+      [NATIVE_ETH, ethToSend]
+    )
+
+    // Encode TAKE_ALL params (currency, minAmount)
+    // We want to receive BLOC tokens
+    const takeParams = encodeAbiParameters(
+      parseAbiParameters('address currency, uint128 minAmount'),
+      [BLOC, blocAmount]
+    )
+
+    // Combine all params
+    const paramsArray = [swapParams, settleParams, takeParams]
+
+    // Encode the V4_SWAP input
+    const v4SwapInput = encodeAbiParameters(
+      parseAbiParameters('bytes actions, bytes[] params'),
+      [actions, paramsArray]
+    )
+
+    // Command byte for V4_SWAP
+    const commands = toHex(COMMANDS.V4_SWAP, { size: 1 })
+
+    // Encode the full execute call
+    const executeData = encodeFunctionData({
+      abi: universalRouterAbi,
+      functionName: 'execute',
+      args: [commands, [v4SwapInput], deadline],
     })
 
-    // Encode refundETH call (returns unused ETH)
-    const refundCalldata = encodeFunctionData({
-      abi: swapRouterAbi,
-      functionName: 'refundETH',
-      args: [],
-    })
-
-    // Multicall: swap + refund unused ETH
-    const multicallData = encodeFunctionData({
-      abi: swapRouterAbi,
-      functionName: 'multicall',
-      args: [deadline, [swapCalldata, refundCalldata]],
-    })
+    log('Sending swap transaction...')
 
     // Send transaction with builder code attribution
     swap({
-      to: UNISWAP_SWAP_ROUTER_02,
-      data: concat([multicallData, DATA_SUFFIX]),
+      to: UNISWAP_UNIVERSAL_ROUTER,
+      data: concat([executeData, DATA_SUFFIX]),
       value: ethToSend,
     })
   }
