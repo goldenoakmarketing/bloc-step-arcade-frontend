@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useConnect } from 'wagmi'
+import { formatEther } from 'viem'
 import { CoinButton } from '@/components/ui/CoinButton'
 import { StakingPanel } from '@/components/staking/StakingPanel'
 import { LOCALPAY_ENABLED } from '@/config/features'
 import { useFarcaster } from '@/providers/FarcasterProvider'
 import { useQuarters } from '@/hooks/useQuarters'
-import { formatUnits } from 'viem'
+import { useSwapEthForBloc } from '@/hooks/useSwapEthForBloc'
 
 export default function ProfilePage() {
   const [purchaseAmount, setPurchaseAmount] = useState(4) // quarters
@@ -17,48 +18,51 @@ export default function ProfilePage() {
   // Farcaster context
   const { user: farcasterUser, isInFarcaster } = useFarcaster()
 
-  // Quarters hook for wallet interaction
+  // Quarters hook for reading balances
   const {
     isConnected,
     quarterBalance,
-    blocBalance,
     formattedBlocBalance,
     formattedTimeBalance,
-    isApprovePending,
-    isApproveConfirming,
-    isApproveSuccess,
-    isBuyPending,
-    isBuyConfirming,
-    isBuySuccess,
-    handleApprove,
-    handleBuyQuarters,
-    needsApproval,
-    hasSufficientBalance,
-    getQuarterCost,
     refetchAll,
-    resetApprove,
-    resetBuy,
-    QUARTER_AMOUNT,
   } = useQuarters()
+
+  // Swap hook for buying BLOC with ETH
+  const {
+    ethBalance,
+    quote,
+    isQuoting,
+    quoteError,
+    getQuote,
+    isSwapPending,
+    isSwapConfirming,
+    isSwapSuccess,
+    handleSwap,
+    resetSwap,
+    formatEthCost,
+    formatBlocAmount,
+  } = useSwapEthForBloc()
 
   // Wallet connection
   const { connect, connectors } = useConnect()
 
-  // Refetch data after successful transactions
-  useEffect(() => {
-    if (isApproveSuccess) {
-      refetchAll()
-      resetApprove()
-    }
-  }, [isApproveSuccess, refetchAll, resetApprove])
+  // Get quote when amount changes
+  const effectiveAmount = customAmount ? parseInt(customAmount) || 0 : purchaseAmount
 
   useEffect(() => {
-    if (isBuySuccess) {
+    if (isConnected && effectiveAmount > 0) {
+      getQuote(effectiveAmount)
+    }
+  }, [isConnected, effectiveAmount])
+
+  // Refetch balances after successful swap
+  useEffect(() => {
+    if (isSwapSuccess) {
       refetchAll()
-      resetBuy()
+      resetSwap()
       setCustomAmount('')
     }
-  }, [isBuySuccess, refetchAll, resetBuy])
+  }, [isSwapSuccess, refetchAll, resetSwap])
 
   const totalLost = '0'
 
@@ -105,13 +109,8 @@ export default function ProfilePage() {
   }
 
   const handleBuy = () => {
-    const amount = customAmount ? parseInt(customAmount) : purchaseAmount
-    if (amount > 0 && isConnected) {
-      if (needsApproval(amount)) {
-        handleApprove(amount)
-      } else {
-        handleBuyQuarters(amount)
-      }
+    if (effectiveAmount > 0 && isConnected) {
+      handleSwap(effectiveAmount)
     }
   }
 
@@ -120,21 +119,20 @@ export default function ProfilePage() {
     setCustomAmount('')
   }
 
-  const effectiveAmount = customAmount ? parseInt(customAmount) || 0 : purchaseAmount
   const donationAmount = getDonationAmount(effectiveAmount)
-  const totalCost = getQuarterCost(effectiveAmount)
-  const formattedCost = formatUnits(totalCost, 18)
-  const canAfford = hasSufficientBalance(effectiveAmount)
-  const needsApprovalForAmount = needsApproval(effectiveAmount)
+
+  // Check if user has enough ETH
+  const canAfford = !quote || !ethBalance ? true : ethBalance.value >= quote.ethRequired
 
   // Determine button state
-  const isLoading = isApprovePending || isApproveConfirming || isBuyPending || isBuyConfirming
+  const isLoading = isSwapPending || isSwapConfirming || isQuoting
   const getButtonText = () => {
     if (!isConnected) return 'Connect Wallet'
-    if (isApprovePending || isApproveConfirming) return 'Approving...'
-    if (isBuyPending || isBuyConfirming) return 'Buying...'
-    if (!canAfford) return 'Insufficient BLOC'
-    if (needsApprovalForAmount) return `Approve ${formattedCost} BLOC`
+    if (isQuoting) return 'Getting price...'
+    if (isSwapPending || isSwapConfirming) return 'Swapping...'
+    if (quoteError) return 'Price unavailable'
+    if (!canAfford) return 'Insufficient ETH'
+    if (quote) return `Buy with ${formatEthCost()} ETH`
     return `Buy ${effectiveAmount} Quarter${effectiveAmount !== 1 ? 's' : ''}`
   }
 
@@ -253,14 +251,15 @@ export default function ProfilePage() {
             <div className="text-4xl font-bold text-gradient">{formatQuarters(quarterBalance)}</div>
             <div className="text-sm text-muted mt-1">{formattedTimeBalance} playtime available</div>
             {isConnected && (
-              <div className="text-xs text-zinc-500 mt-2">
-                BLOC Balance: {formattedBlocBalance}
+              <div className="text-xs text-zinc-500 mt-2 space-y-0.5">
+                <div>BLOC: {formattedBlocBalance}</div>
+                <div>ETH: {ethBalance ? Number(formatEther(ethBalance.value)).toFixed(4) : '0'}</div>
               </div>
             )}
           </div>
 
           <div className="border-t border-[#27272a] pt-4">
-            <div className="text-sm text-muted mb-3">Buy Quarters</div>
+            <div className="text-sm text-muted mb-3">Buy Quarters with ETH</div>
 
             {/* Quick select buttons */}
             <div className="flex gap-2 mb-3">
@@ -297,8 +296,14 @@ export default function ProfilePage() {
                   <span>{effectiveAmount}Q ({formatTime(effectiveAmount)} playtime)</span>
                 </div>
                 <div className="flex justify-between mb-1">
+                  <span className="text-muted">BLOC:</span>
+                  <span>{formatBlocAmount()}</span>
+                </div>
+                <div className="flex justify-between mb-1">
                   <span className="text-muted">Cost:</span>
-                  <span className={!canAfford && isConnected ? 'text-red-400' : ''}>{formattedCost} BLOC</span>
+                  <span className={!canAfford && isConnected ? 'text-red-400' : ''}>
+                    {isQuoting ? '...' : quote ? `${formatEthCost()} ETH` : '...'}
+                  </span>
                 </div>
                 {donationAmount > 0 && (
                   <div className="flex justify-between mb-1 text-yellow-500">
@@ -308,20 +313,20 @@ export default function ProfilePage() {
                 )}
                 <div className="flex justify-between font-bold border-t border-zinc-700 pt-1 mt-1">
                   <span>You receive:</span>
-                  <span className="text-gradient">{effectiveAmount}Q</span>
+                  <span className="text-gradient">{formatBlocAmount()} BLOC</span>
                 </div>
               </div>
             )}
 
             <button
               onClick={isConnected ? handleBuy : handleConnect}
-              className={`btn btn-full ${!isConnected || (canAfford && !isLoading) ? 'btn-success' : 'btn-secondary'}`}
-              disabled={isConnected && (effectiveAmount < 1 || isLoading || !canAfford)}
+              className={`btn btn-full ${!isConnected || (canAfford && !isLoading && !quoteError) ? 'btn-success' : 'btn-secondary'}`}
+              disabled={isConnected && (effectiveAmount < 1 || isLoading || !canAfford || !!quoteError)}
             >
               {getButtonText()}
             </button>
             <p className="text-xs text-muted text-center mt-2">
-              1 Quarter = 250 BLOC = 15 min session
+              Swaps ETH → BLOC via Uniswap V3
             </p>
           </div>
         </div>
