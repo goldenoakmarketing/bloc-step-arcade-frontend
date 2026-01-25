@@ -1,8 +1,9 @@
 'use client'
 
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseUnits, formatUnits } from 'viem'
+import { useAccount, useReadContract, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
+import { parseUnits, formatUnits, encodeFunctionData, concat } from 'viem'
 import { contracts, blocTokenAbi, stakingPoolAbi } from '@/config/contracts'
+import { DATA_SUFFIX } from '@/config/builder'
 
 export function useStaking() {
   const { address, isConnected } = useAccount()
@@ -51,11 +52,11 @@ export function useStaking() {
     query: { enabled: !!address },
   })
 
-  // Write contract hooks
-  const { writeContract: approve, data: approveTxHash, isPending: isApprovePending, reset: resetApprove } = useWriteContract()
-  const { writeContract: stake, data: stakeTxHash, isPending: isStakePending, reset: resetStake } = useWriteContract()
-  const { writeContract: unstake, data: unstakeTxHash, isPending: isUnstakePending, reset: resetUnstake } = useWriteContract()
-  const { writeContract: claimRewards, data: claimTxHash, isPending: isClaimPending, reset: resetClaim } = useWriteContract()
+  // Transaction hooks with builder code attribution
+  const { sendTransaction: approve, data: approveTxHash, isPending: isApprovePending, reset: resetApprove } = useSendTransaction()
+  const { sendTransaction: stake, data: stakeTxHash, isPending: isStakePending, reset: resetStake } = useSendTransaction()
+  const { sendTransaction: unstake, data: unstakeTxHash, isPending: isUnstakePending, reset: resetUnstake } = useSendTransaction()
+  const { sendTransaction: claimRewards, data: claimTxHash, isPending: isClaimPending, reset: resetClaim } = useSendTransaction()
 
   // Wait for transaction receipts
   const { isLoading: isApproveConfirming, isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
@@ -80,39 +81,51 @@ export function useStaking() {
     refetchAllowance()
   }
 
-  // Action functions
+  // Action functions with builder code attribution
   const handleApprove = (amount: bigint) => {
-    approve({
-      address: contracts.blocToken,
+    const data = encodeFunctionData({
       abi: blocTokenAbi,
       functionName: 'approve',
       args: [contracts.stakingPool, amount],
     })
+    approve({
+      to: contracts.blocToken,
+      data: concat([data, DATA_SUFFIX]),
+    })
   }
 
   const handleStake = (amount: bigint) => {
-    stake({
-      address: contracts.stakingPool,
+    const data = encodeFunctionData({
       abi: stakingPoolAbi,
       functionName: 'stake',
       args: [amount],
     })
+    stake({
+      to: contracts.stakingPool,
+      data: concat([data, DATA_SUFFIX]),
+    })
   }
 
   const handleUnstake = (amount: bigint) => {
-    unstake({
-      address: contracts.stakingPool,
+    const data = encodeFunctionData({
       abi: stakingPoolAbi,
       functionName: 'unstake',
       args: [amount],
     })
+    unstake({
+      to: contracts.stakingPool,
+      data: concat([data, DATA_SUFFIX]),
+    })
   }
 
   const handleClaimRewards = () => {
-    claimRewards({
-      address: contracts.stakingPool,
+    const data = encodeFunctionData({
       abi: stakingPoolAbi,
       functionName: 'claimRewards',
+    })
+    claimRewards({
+      to: contracts.stakingPool,
+      data: concat([data, DATA_SUFFIX]),
     })
   }
 
