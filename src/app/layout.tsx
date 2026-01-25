@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Web3Provider } from '@/providers/Web3Provider'
+import { FarcasterProvider } from '@/providers/FarcasterProvider'
 import { Header } from '@/components/layout/Header'
 import { OnChatWidget } from '@/components/chat/OnChatWidget'
 import './globals.css'
@@ -26,13 +27,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Web3Provider>
-          <main className="pb-20">
-            {children}
-          </main>
-          <Header />
-          <OnChatWidget />
-        </Web3Provider>
+        <FarcasterProvider>
+          <Web3Provider>
+            <main className="pb-20">
+              {children}
+            </main>
+            <Header />
+            <OnChatWidget />
+          </Web3Provider>
+        </FarcasterProvider>
       </body>
     </html>
   )
