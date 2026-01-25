@@ -136,10 +136,21 @@ export function useStaking() {
   // Format helpers
   const formatBloc = (value: bigint | undefined) => {
     if (!value) return '0.00'
-    return Number(formatUnits(value, BLOC_DECIMALS)).toLocaleString('en-US', {
+    const formatted = formatUnits(value, BLOC_DECIMALS)
+    const asNumber = Number(formatted)
+    const display = asNumber.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
+    // Debug logging
+    console.log('[useStaking] formatBloc:', {
+      raw: value?.toString(),
+      decimals: BLOC_DECIMALS,
+      formatted,
+      asNumber,
+      display,
+    })
+    return display
   }
 
   const parseBloc = (value: string) => {
