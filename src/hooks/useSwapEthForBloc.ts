@@ -23,7 +23,7 @@ const POOL_CONFIGS = [
   { fee: 100, tickSpacing: 1 },      // 0.01%
 ] as const
 
-let ACTIVE_POOL_CONFIG = POOL_CONFIGS[0]
+let ACTIVE_POOL_CONFIG: { fee: number; tickSpacing: number } = POOL_CONFIGS[0]
 
 // BLOC token has 18 decimals (standard ERC20)
 const BLOC_DECIMALS = 18
