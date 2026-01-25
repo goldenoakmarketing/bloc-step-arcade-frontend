@@ -7,6 +7,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Bloc Step Arcade',
   description: 'Play games on Base blockchain',
+  other: {
+    'base:app_id': '697650c088e3bac59cf3d85c',
+  },
 }
 
 export const viewport: Viewport = {
