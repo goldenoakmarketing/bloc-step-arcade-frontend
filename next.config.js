@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -8,6 +10,14 @@ const nextConfig = {
         destination: '/api/well-known/:path*',
       },
     ]
+  },
+  webpack: (config) => {
+    // Shim @react-native-async-storage/async-storage for @metamask/sdk
+    config.resolve.alias['@react-native-async-storage/async-storage'] = path.resolve(
+      __dirname,
+      'src/lib/async-storage-shim.js'
+    )
+    return config
   },
 }
 

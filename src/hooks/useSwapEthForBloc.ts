@@ -367,7 +367,7 @@ export function useSwapEthForBloc() {
       toHex(ACTIONS.TAKE_ALL, { size: 1 }),
     ])
 
-    const poolKey = buildPoolKey(ACTIVE_POOL_CONFIG)
+    const poolKey = buildPoolKey(ACTIVE_POOL_CONFIG as typeof POOL_CONFIGS[number])
 
     // Encode ExactOutputSingleParams for the swap
     // struct ExactOutputSingleParams { PoolKey poolKey, bool zeroForOne, uint128 amountOut, uint128 amountInMaximum, bytes hookData }
