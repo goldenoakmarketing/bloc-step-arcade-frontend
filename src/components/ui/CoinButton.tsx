@@ -1,39 +1,69 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAccount, useConnect } from 'wagmi'
 
 interface CoinButtonProps {
   onClaim: (found: number) => void
 }
 
-const COOLDOWN_MS = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-const STORAGE_KEY = 'lostfound_lastclaim'
+interface ClaimInfo {
+  canClaim: boolean
+  nextClaimTime?: string
+  streak: number
+  maxClaimable: number
+  totalClaimed: number
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
 
 export function CoinButton({ onClaim }: CoinButtonProps) {
   const [isPressed, setIsPressed] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [lastFound, setLastFound] = useState<number | null>(null)
-  const [cooldownRemaining, setCooldownRemaining] = useState(0)
+  const [claimInfo, setClaimInfo] = useState<ClaimInfo | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Check cooldown on mount and update every second
+  const { address, isConnected } = useAccount()
+  const { connect, connectors } = useConnect()
+
+  // Fetch claim info when wallet connects
   useEffect(() => {
-    const checkCooldown = () => {
-      const lastClaim = localStorage.getItem(STORAGE_KEY)
-      if (lastClaim) {
-        const elapsed = Date.now() - parseInt(lastClaim)
-        const remaining = COOLDOWN_MS - elapsed
-        setCooldownRemaining(remaining > 0 ? remaining : 0)
-      } else {
-        setCooldownRemaining(0)
-      }
+    if (isConnected && address) {
+      fetchClaimInfo()
+    } else {
+      setClaimInfo(null)
     }
+  }, [isConnected, address])
 
-    checkCooldown()
-    const interval = setInterval(checkCooldown, 1000)
+  // Refresh claim info periodically
+  useEffect(() => {
+    if (!isConnected || !address) return
+
+    const interval = setInterval(fetchClaimInfo, 60000) // Every minute
     return () => clearInterval(interval)
-  }, [])
+  }, [isConnected, address])
 
-  const formatCooldown = (ms: number) => {
+  const fetchClaimInfo = async () => {
+    if (!address) return
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/pool/claim-info/${address}`)
+      const data = await res.json()
+
+      if (data.success) {
+        setClaimInfo(data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch claim info:', err)
+    }
+  }
+
+  const formatCooldown = (nextClaimTime: string) => {
+    const next = new Date(nextClaimTime).getTime()
+    const now = Date.now()
+    const ms = Math.max(0, next - now)
+
     const minutes = Math.floor(ms / 60000)
     const seconds = Math.floor((ms % 60000) / 1000)
     if (minutes >= 60) {
@@ -44,42 +74,83 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
     return `${minutes}m ${seconds}s`
   }
 
-  const isOnCooldown = cooldownRemaining > 0
+  const isOnCooldown = claimInfo && !claimInfo.canClaim && claimInfo.nextClaimTime
 
-  const handleClick = () => {
-    if (isPlaying || isOnCooldown) return
+  const handleConnect = () => {
+    const farcasterConnector = connectors.find(c => c.name.toLowerCase().includes('farcaster'))
+    const connector = farcasterConnector || connectors[0]
+    if (connector) {
+      connect({ connector })
+    }
+  }
+
+  const handleClick = async () => {
+    if (isLoading) return
+
+    // If not connected, prompt connection
+    if (!isConnected) {
+      handleConnect()
+      return
+    }
+
+    if (isOnCooldown) return
 
     setIsPressed(true)
-    setIsPlaying(true)
+    setIsLoading(true)
     setLastFound(null)
+    setError(null)
 
     // Play coin sound
     const audio = new Audio('/sounds/coins.mp3')
     audio.play().catch(() => {})
 
-    // Check the pool - result comes back after delay
-    setTimeout(() => {
-      // TODO: Call backend API to check for claimable quarters
-      const found = 0
-      setLastFound(found)
-
-      // Set cooldown regardless of whether coins were found
-      localStorage.setItem(STORAGE_KEY, Date.now().toString())
-      setCooldownRemaining(COOLDOWN_MS)
-
-      if (found > 0) {
-        onClaim(found)
-      }
-      setIsPlaying(false)
-    }, 1500)
-
     setTimeout(() => setIsPressed(false), 200)
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/pool/claim`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': address!,
+        },
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setLastFound(data.data.claimed)
+        if (data.data.claimed > 0) {
+          onClaim(data.data.claimed)
+        }
+        // Refresh claim info
+        await fetchClaimInfo()
+      } else if (res.status === 429) {
+        // Cooldown active
+        setClaimInfo(data.data)
+        setLastFound(0)
+      } else {
+        setError(data.error || 'Claim failed')
+        setLastFound(0)
+      }
+    } catch (err) {
+      console.error('Claim error:', err)
+      setError('Network error')
+      setLastFound(0)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getStreakDisplay = () => {
+    if (!claimInfo) return null
+    if (claimInfo.streak === 0) return null
+    return `${claimInfo.streak} day streak`
   }
 
   return (
     <button
       onClick={handleClick}
-      disabled={isPlaying || isOnCooldown}
+      disabled={isLoading}
       className="relative group"
     >
       {/* Main button container */}
@@ -103,11 +174,20 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
 
         {/* Main content */}
         <div className="flex flex-col items-center justify-center h-full pl-4">
-          {isOnCooldown ? (
+          {!isConnected ? (
+            <>
+              <div className="text-2xl font-bold text-zinc-400">
+                25¢
+              </div>
+              <div className="text-[10px] mt-2 tracking-wider text-zinc-600">
+                CONNECT
+              </div>
+            </>
+          ) : isOnCooldown && claimInfo?.nextClaimTime ? (
             <>
               {/* Cooldown display */}
               <div className="text-xl font-bold text-zinc-500">
-                {formatCooldown(cooldownRemaining)}
+                {formatCooldown(claimInfo.nextClaimTime)}
               </div>
               <div className="text-[10px] mt-2 tracking-wider text-zinc-600">
                 COOLDOWN
@@ -124,6 +204,13 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
               <div className={`text-[10px] mt-2 tracking-wider ${isPressed ? 'text-red-200' : 'text-zinc-600'}`}>
                 LOST & FOUND
               </div>
+
+              {/* Streak indicator */}
+              {claimInfo && claimInfo.streak > 0 && (
+                <div className="text-[9px] mt-1 text-yellow-500">
+                  {claimInfo.streak} day streak
+                </div>
+              )}
             </>
           )}
         </div>
@@ -136,12 +223,22 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
 
       {/* Label below */}
       <div className="text-center mt-2 text-xs text-muted">
-        {isOnCooldown ? (
+        {!isConnected ? (
+          'Connect wallet'
+        ) : isOnCooldown ? (
           'Come back later'
-        ) : isPlaying ? (
-          'Searching...'
+        ) : isLoading ? (
+          'Claiming...'
+        ) : error ? (
+          <span className="text-red-400">{error}</span>
         ) : lastFound !== null ? (
-          lastFound > 0 ? `Found ${lastFound} quarter${lastFound > 1 ? 's' : ''}!` : 'Nothing this time'
+          lastFound > 0 ? (
+            <span className="text-green-400">Found {lastFound} quarter{lastFound > 1 ? 's' : ''}!</span>
+          ) : (
+            'Nothing this time'
+          )
+        ) : claimInfo ? (
+          `Up to ${claimInfo.maxClaimable}Q available`
         ) : (
           'Try your luck'
         )}

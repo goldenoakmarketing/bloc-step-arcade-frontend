@@ -4,6 +4,7 @@ export const contracts = {
   stakingPool: process.env.NEXT_PUBLIC_STAKING_POOL_ADDRESS as `0x${string}`,
   yeetEngine: process.env.NEXT_PUBLIC_YEET_ENGINE_ADDRESS as `0x${string}`,
   tipBot: process.env.NEXT_PUBLIC_TIP_BOT_ADDRESS as `0x${string}`,
+  poolPayout: (process.env.NEXT_PUBLIC_POOL_PAYOUT_ADDRESS || '0xb440AE06aC5ceF3Eb837FDF353459Fb8eFF3556d') as `0x${string}`,
 } as const
 
 export const arcadeVaultAbi = [
