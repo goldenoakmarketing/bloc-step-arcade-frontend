@@ -3,13 +3,6 @@
 import Link from 'next/link'
 
 export default function HomePage() {
-  // Placeholder stats (would come from API in production)
-  const stats = {
-    playing: 127,
-    donated: 4821,
-    staked: '1.2M',
-  }
-
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-lg mx-auto">
@@ -56,29 +49,6 @@ export default function HomePage() {
           <p className="text-zinc-500 text-sm mt-4">
             🎁 Free quarters waiting in the Lost & Found
           </p>
-        </div>
-
-        {/* LIVE STATS BAR */}
-        <div className="card mb-10 bg-zinc-900/80 border border-zinc-800">
-          <div className="flex justify-around text-center py-2">
-            <div>
-              <div className="flex items-center justify-center gap-1.5 text-lg font-bold text-white">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                {stats.playing}
-              </div>
-              <div className="text-xs text-zinc-500">Playing</div>
-            </div>
-            <div className="border-l border-zinc-700" />
-            <div>
-              <div className="text-lg font-bold text-white">{stats.donated.toLocaleString()}</div>
-              <div className="text-xs text-zinc-500">Donated</div>
-            </div>
-            <div className="border-l border-zinc-700" />
-            <div>
-              <div className="text-lg font-bold text-white">{stats.staked}</div>
-              <div className="text-xs text-zinc-500">$BLOC Staked</div>
-            </div>
-          </div>
         </div>
 
         {/* THE ARCADE LOOP - Visual Centerpiece */}

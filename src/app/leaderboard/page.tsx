@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 type LeaderboardType = 'lost' | 'staking' | 'time'
 
@@ -19,6 +19,25 @@ const leaderboardData: Record<LeaderboardType, { rank: number; name: string | nu
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('lost')
+  const [totalDonated, setTotalDonated] = useState<number>(0)
+
+  // Fetch total donated from backend
+  useEffect(() => {
+    const fetchTotalDonated = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
+        const res = await fetch(`${apiUrl}/api/v1/stats/total-donated`)
+        if (res.ok) {
+          const data = await res.json()
+          setTotalDonated(data.totalDonated || 0)
+        }
+      } catch (err) {
+        // Silently fail - will show 0
+        console.log('Could not fetch total donated:', err)
+      }
+    }
+    fetchTotalDonated()
+  }, [])
   const entries = leaderboardData[activeTab]
 
   const getRankDisplay = (rank: number) => {
@@ -43,9 +62,16 @@ export default function LeaderboardPage() {
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-lg mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-2xl font-bold mb-1">Leaderboard</h1>
           <p className="text-muted text-sm">Top players</p>
+        </div>
+
+        {/* Total Donated Stat */}
+        <div className="stat-card mb-6 text-center">
+          <div className="stat-label">Total Donated</div>
+          <div className="stat-value text-2xl text-gradient">{totalDonated.toLocaleString()}</div>
+          <div className="text-xs text-muted">quarters to the pool</div>
         </div>
 
         {/* Tabs */}

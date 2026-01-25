@@ -206,6 +206,13 @@ export function StakingPanel() {
         </div>
       </div>
 
+      {/* Total Staked - Pool Stats */}
+      <div className="stat-card text-center">
+        <div className="stat-label">Total Staked in Pool</div>
+        <div className="stat-value text-2xl text-gradient">{formattedTotalStaked}</div>
+        <div className="text-xs text-muted">BLOC</div>
+      </div>
+
       {/* Stake Form */}
       <div className="card">
         <h3 className="font-bold mb-4">Stake BLOC</h3>
@@ -229,10 +236,6 @@ export function StakingPanel() {
           >
             Max
           </button>
-        </div>
-
-        <div className="text-sm text-muted mb-3">
-          Pool Total: {formattedTotalStaked} BLOC
         </div>
 
         {error && (
