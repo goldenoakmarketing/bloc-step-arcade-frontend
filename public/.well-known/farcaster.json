@@ -1,0 +1,23 @@
+{
+  "accountAssociation": {
+    "header": "TODO_SIGN_WITH_FARCASTER_ACCOUNT",
+    "payload": "TODO_SIGN_WITH_FARCASTER_ACCOUNT",
+    "signature": "TODO_SIGN_WITH_FARCASTER_ACCOUNT"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "bloc step arcade",
+    "homeUrl": "https://blocsteparcade.netlify.app",
+    "iconUrl": "https://blocsteparcade.netlify.app/icon-1024.png",
+    "splashImageUrl": "https://blocsteparcade.netlify.app/splash-200.png",
+    "splashBackgroundColor": "#09090b",
+    "subtitle": "Web3 arcade on Base",
+    "description": "Play games, earn rewards, and stake BLOC tokens. The arcade where everyone wins.",
+    "primaryCategory": "games",
+    "tags": ["arcade", "games", "base", "web3", "rewards"],
+    "requiredChains": ["eip155:8453"],
+    "requiredCapabilities": [
+      "wallet.getEthereumProvider"
+    ]
+  }
+}
