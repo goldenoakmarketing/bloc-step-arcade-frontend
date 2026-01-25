@@ -11,8 +11,10 @@ const UNISWAP_SWAP_ROUTER_02 = '0x2626664c2603336E57B271c5C0b26F421741e481' as c
 const WETH = '0x4200000000000000000000000000000000000006' as const
 const BLOC = '0x022c6cb9Fd69A99cF030cB43e3c28BF82bF68Fe9' as const
 
-// Pool fee tier (0.3% = 3000, 1% = 10000) - using 1% for smaller tokens
-const POOL_FEE = 10000
+// Pool fee tiers to try (in order of preference)
+// 1% = 10000, 0.3% = 3000, 0.05% = 500
+const POOL_FEES = [10000, 3000, 500] as const
+let ACTIVE_POOL_FEE = 10000 // Will be updated when a working pool is found
 
 // BLOC token has 18 decimals (standard ERC20)
 const BLOC_DECIMALS = 18
@@ -137,6 +139,84 @@ export function useSwapEthForBloc() {
     hash: swapTxHash,
   })
 
+  // Try to get quote with a specific fee tier
+  const tryQuoteWithFee = async (blocAmount: bigint, fee: number): Promise<bigint | null> => {
+    log('Trying fee tier:', fee)
+
+    const callData = encodeFunctionData({
+      abi: quoterAbi,
+      functionName: 'quoteExactOutputSingle',
+      args: [{
+        tokenIn: WETH,
+        tokenOut: BLOC,
+        amount: blocAmount,
+        fee,
+        sqrtPriceLimitX96: BigInt(0),
+      }],
+    })
+
+    try {
+      if (publicClient) {
+        const result = await publicClient.call({
+          to: UNISWAP_QUOTER_V2,
+          data: callData,
+        })
+
+        if (!result.data) {
+          log('No data returned for fee', fee)
+          return null
+        }
+
+        const decoded = decodeFunctionResult({
+          abi: quoterAbi,
+          functionName: 'quoteExactOutputSingle',
+          data: result.data,
+        })
+
+        const ethRequired = decoded[0] as bigint
+        log('Fee', fee, 'succeeded! ETH required:', formatEther(ethRequired))
+        ACTIVE_POOL_FEE = fee
+        return ethRequired
+      } else {
+        // Fallback to direct RPC call
+        const response = await fetch('https://mainnet.base.org', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_call',
+            params: [
+              { to: UNISWAP_QUOTER_V2, data: callData },
+              'latest',
+            ],
+          }),
+        })
+
+        const result = await response.json()
+
+        if (result.error || !result.result || result.result === '0x') {
+          log('Fee', fee, 'failed:', result.error?.message || 'empty result')
+          return null
+        }
+
+        const decoded = decodeFunctionResult({
+          abi: quoterAbi,
+          functionName: 'quoteExactOutputSingle',
+          data: result.result,
+        })
+
+        const ethRequired = decoded[0] as bigint
+        log('Fee', fee, 'succeeded! ETH required:', formatEther(ethRequired))
+        ACTIVE_POOL_FEE = fee
+        return ethRequired
+      }
+    } catch (err) {
+      log('Fee', fee, 'error:', err instanceof Error ? err.message : 'unknown')
+      return null
+    }
+  }
+
   // Get quote for exact output (how much ETH for X BLOC)
   const getQuote = async (quarters: number): Promise<bigint | null> => {
     if (quarters <= 0) {
@@ -149,135 +229,47 @@ export function useSwapEthForBloc() {
 
     const blocAmount = BLOC_PER_QUARTER * BigInt(quarters)
     log('Getting quote for', quarters, 'quarters =', formatUnits(blocAmount, BLOC_DECIMALS), 'BLOC')
+    log('Quoter address:', UNISWAP_QUOTER_V2)
+    log('WETH:', WETH, 'BLOC:', BLOC)
+    log('Will try fee tiers:', POOL_FEES)
 
     try {
-      // First try using wagmi's publicClient
-      if (publicClient) {
-        log('Using wagmi publicClient')
+      // Try each fee tier until one works
+      let ethRequired: bigint | null = null
 
-        const callData = encodeFunctionData({
-          abi: quoterAbi,
-          functionName: 'quoteExactOutputSingle',
-          args: [{
-            tokenIn: WETH,
-            tokenOut: BLOC,
-            amount: blocAmount,
-            fee: POOL_FEE,
-            sqrtPriceLimitX96: BigInt(0),
-          }],
-        })
-
-        log('Call data:', callData)
-        log('Quoter address:', UNISWAP_QUOTER_V2)
-        log('WETH:', WETH, 'BLOC:', BLOC, 'Fee:', POOL_FEE)
-
-        const result = await publicClient.call({
-          to: UNISWAP_QUOTER_V2,
-          data: callData,
-        })
-
-        log('Quote result:', result)
-
-        if (!result.data) {
-          throw new Error('No data returned from quoter')
+      for (const fee of POOL_FEES) {
+        ethRequired = await tryQuoteWithFee(blocAmount, fee)
+        if (ethRequired !== null) {
+          break
         }
-
-        // Decode the result
-        const decoded = decodeFunctionResult({
-          abi: quoterAbi,
-          functionName: 'quoteExactOutputSingle',
-          data: result.data,
-        })
-
-        log('Decoded result:', decoded)
-
-        const ethRequired = decoded[0] as bigint
-
-        // Add 5% slippage buffer
-        const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
-
-        log('ETH required:', formatEther(ethRequired), 'with slippage:', formatEther(ethWithSlippage))
-
-        setQuote({
-          ethRequired: ethWithSlippage,
-          blocAmount,
-          quarters,
-        })
-
-        return ethWithSlippage
-      } else {
-        // Fallback to direct RPC call
-        log('Using direct RPC call (no publicClient)')
-
-        const response = await fetch('https://mainnet.base.org', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'eth_call',
-            params: [
-              {
-                to: UNISWAP_QUOTER_V2,
-                data: encodeFunctionData({
-                  abi: quoterAbi,
-                  functionName: 'quoteExactOutputSingle',
-                  args: [{
-                    tokenIn: WETH,
-                    tokenOut: BLOC,
-                    amount: blocAmount,
-                    fee: POOL_FEE,
-                    sqrtPriceLimitX96: BigInt(0),
-                  }],
-                }),
-              },
-              'latest',
-            ],
-          }),
-        })
-
-        const result = await response.json()
-        log('RPC result:', result)
-
-        if (result.error) {
-          log('RPC error:', result.error)
-          throw new Error(result.error.message || 'Quote failed')
-        }
-
-        if (!result.result || result.result === '0x') {
-          throw new Error('Empty result from quoter - pool may not exist')
-        }
-
-        // Decode the result
-        const decoded = decodeFunctionResult({
-          abi: quoterAbi,
-          functionName: 'quoteExactOutputSingle',
-          data: result.result,
-        })
-
-        const ethRequired = decoded[0] as bigint
-        const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
-
-        log('ETH required:', formatEther(ethRequired), 'with slippage:', formatEther(ethWithSlippage))
-
-        setQuote({
-          ethRequired: ethWithSlippage,
-          blocAmount,
-          quarters,
-        })
-
-        return ethWithSlippage
       }
+
+      if (ethRequired === null) {
+        throw new Error('No liquidity pool found for any fee tier')
+      }
+
+      // Add 5% slippage buffer
+      const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
+
+      log('ETH required:', formatEther(ethRequired), 'with slippage:', formatEther(ethWithSlippage))
+      log('Using fee tier:', ACTIVE_POOL_FEE)
+
+      setQuote({
+        ethRequired: ethWithSlippage,
+        blocAmount,
+        quarters,
+      })
+
+      return ethWithSlippage
     } catch (err) {
       console.error('Quote error:', err)
       log('Quote error details:', err)
 
-      // Check if it's a pool-related error
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      if (errorMessage.includes('execution reverted') || errorMessage.includes('pool')) {
-        setQuoteError('No liquidity pool found')
+      if (errorMessage.includes('liquidity') || errorMessage.includes('pool')) {
+        setQuoteError('No liquidity pool found for BLOC/ETH')
       } else {
-        setQuoteError('Failed to get price quote')
+        setQuoteError('Failed to get price quote: ' + errorMessage)
       }
 
       setQuote(null)
@@ -313,14 +305,15 @@ export function useSwapEthForBloc() {
     // Deadline 20 minutes from now
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200)
 
-    // Encode exactOutputSingle call
+    // Encode exactOutputSingle call using the fee tier that worked during quote
+    log('Executing swap with fee tier:', ACTIVE_POOL_FEE)
     const swapCalldata = encodeFunctionData({
       abi: swapRouterAbi,
       functionName: 'exactOutputSingle',
       args: [{
         tokenIn: WETH,
         tokenOut: BLOC,
-        fee: POOL_FEE,
+        fee: ACTIVE_POOL_FEE,
         recipient: recipient,
         amountOut: blocAmount,
         amountInMaximum: ethToSend,
