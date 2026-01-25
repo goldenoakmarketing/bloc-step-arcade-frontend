@@ -87,9 +87,6 @@ export default function ProfilePage() {
     return `${mins}m`
   }
 
-  // Check if this purchase would trigger a yeet (every 8th quarter)
-  // Note: Yeet doesn't reduce what you receive, it's a bonus event
-  const wouldTriggerYeet = (quarters: number) => quarters >= 8
 
   const handleClaim = (found: number) => {
     // In real app, this would call the contract
@@ -120,7 +117,12 @@ export default function ProfilePage() {
     setCustomAmount('')
   }
 
-  const triggersYeet = wouldTriggerYeet(effectiveAmount)
+  // Calculate lost quarters (every 8th quarter goes to the pool)
+  const lostQuarters = Math.floor(effectiveAmount / 8)
+  const receivedQuarters = effectiveAmount - lostQuarters
+  const BLOC_PER_QUARTER = 250
+  const lostBloc = lostQuarters * BLOC_PER_QUARTER
+  const receivedBloc = receivedQuarters * BLOC_PER_QUARTER
 
   // Check if user has enough ETH
   const canAfford = !quote || !ethBalance ? true : ethBalance.value >= quote.ethRequired
@@ -297,25 +299,21 @@ export default function ProfilePage() {
                   <span>{effectiveAmount}Q ({formatTime(effectiveAmount)} playtime)</span>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <span className="text-muted">BLOC:</span>
-                  <span>{formatBlocAmount()}</span>
-                </div>
-                <div className="flex justify-between mb-1">
                   <span className="text-muted">Cost:</span>
                   <span className={!canAfford && isConnected ? 'text-red-400' : ''}>
                     {isQuoting ? '...' : quote ? `${formatEthCost()} ETH` : '...'}
                   </span>
                 </div>
-                {triggersYeet && (
-                  <div className="flex justify-between mb-1 text-yellow-500">
-                    <span>Bonus:</span>
-                    <span>Triggers yeet event!</span>
-                  </div>
-                )}
                 <div className="flex justify-between font-bold border-t border-zinc-700 pt-1 mt-1">
                   <span>You receive:</span>
-                  <span className="text-gradient">{formatBlocAmount()} BLOC</span>
+                  <span className="text-gradient">{receivedBloc.toLocaleString()} BLOC</span>
                 </div>
+                {lostQuarters > 0 && (
+                  <div className="flex justify-between text-yellow-500 mt-1">
+                    <span>Lost to pool:</span>
+                    <span>{lostBloc.toLocaleString()} BLOC</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -327,7 +325,7 @@ export default function ProfilePage() {
               {getButtonText()}
             </button>
             <p className="text-xs text-muted text-center mt-2">
-              Swaps ETH → BLOC via Uniswap V3
+              Swaps ETH → BLOC via Uniswap V4
             </p>
           </div>
         </div>
