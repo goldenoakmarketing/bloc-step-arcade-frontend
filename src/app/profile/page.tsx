@@ -87,8 +87,9 @@ export default function ProfilePage() {
     return `${mins}m`
   }
 
-  // Calculate donation (1 in 8 goes to pool) - this happens in the contract via yeet
-  const getDonationAmount = (quarters: number) => Math.floor(quarters / 8)
+  // Check if this purchase would trigger a yeet (every 8th quarter)
+  // Note: Yeet doesn't reduce what you receive, it's a bonus event
+  const wouldTriggerYeet = (quarters: number) => quarters >= 8
 
   const handleClaim = (found: number) => {
     // In real app, this would call the contract
@@ -119,7 +120,7 @@ export default function ProfilePage() {
     setCustomAmount('')
   }
 
-  const donationAmount = getDonationAmount(effectiveAmount)
+  const triggersYeet = wouldTriggerYeet(effectiveAmount)
 
   // Check if user has enough ETH
   const canAfford = !quote || !ethBalance ? true : ethBalance.value >= quote.ethRequired
@@ -305,10 +306,10 @@ export default function ProfilePage() {
                     {isQuoting ? '...' : quote ? `${formatEthCost()} ETH` : '...'}
                   </span>
                 </div>
-                {donationAmount > 0 && (
+                {triggersYeet && (
                   <div className="flex justify-between mb-1 text-yellow-500">
-                    <span>Yeet trigger:</span>
-                    <span>Every 8th quarter</span>
+                    <span>Bonus:</span>
+                    <span>Triggers yeet event!</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold border-t border-zinc-700 pt-1 mt-1">

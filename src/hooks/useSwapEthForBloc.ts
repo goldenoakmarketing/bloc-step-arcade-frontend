@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { parseEther, formatEther, formatUnits, encodeFunctionData, concat } from 'viem'
+import { useState } from 'react'
+import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, usePublicClient } from 'wagmi'
+import { formatEther, formatUnits, encodeFunctionData, concat, decodeFunctionResult } from 'viem'
 import { DATA_SUFFIX } from '@/config/builder'
 
 // Uniswap V3 addresses on Base
@@ -16,6 +16,10 @@ const POOL_FEE = 10000
 
 // 1 quarter = 250 BLOC
 const BLOC_PER_QUARTER = BigInt(250) * BigInt(10 ** 18)
+
+// Debug logging
+const DEBUG = true
+const log = (...args: unknown[]) => DEBUG && console.log('[useSwapEthForBloc]', ...args)
 
 // QuoterV2 ABI for quoteExactOutputSingle
 const quoterAbi = [
@@ -104,6 +108,7 @@ const swapRouterAbi = [
 export function useSwapEthForBloc() {
   const { address, isConnected } = useAccount()
   const { data: ethBalance } = useBalance({ address })
+  const publicClient = usePublicClient()
 
   const [quote, setQuote] = useState<{
     ethRequired: bigint
@@ -140,58 +145,138 @@ export function useSwapEthForBloc() {
     setQuoteError(null)
 
     const blocAmount = BLOC_PER_QUARTER * BigInt(quarters)
+    log('Getting quote for', quarters, 'quarters =', formatUnits(blocAmount, 18), 'BLOC')
 
     try {
-      // Use staticCall to simulate the quote
-      const response = await fetch(`https://mainnet.base.org`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'eth_call',
-          params: [
-            {
-              to: UNISWAP_QUOTER_V2,
-              data: encodeFunctionData({
-                abi: quoterAbi,
-                functionName: 'quoteExactOutputSingle',
-                args: [{
-                  tokenIn: WETH,
-                  tokenOut: BLOC,
-                  amount: blocAmount,
-                  fee: POOL_FEE,
-                  sqrtPriceLimitX96: BigInt(0),
-                }],
-              }),
-            },
-            'latest',
-          ],
-        }),
-      })
+      // First try using wagmi's publicClient
+      if (publicClient) {
+        log('Using wagmi publicClient')
 
-      const result = await response.json()
+        const callData = encodeFunctionData({
+          abi: quoterAbi,
+          functionName: 'quoteExactOutputSingle',
+          args: [{
+            tokenIn: WETH,
+            tokenOut: BLOC,
+            amount: blocAmount,
+            fee: POOL_FEE,
+            sqrtPriceLimitX96: BigInt(0),
+          }],
+        })
 
-      if (result.error) {
-        throw new Error(result.error.message || 'Quote failed')
+        log('Call data:', callData)
+        log('Quoter address:', UNISWAP_QUOTER_V2)
+        log('WETH:', WETH, 'BLOC:', BLOC, 'Fee:', POOL_FEE)
+
+        const result = await publicClient.call({
+          to: UNISWAP_QUOTER_V2,
+          data: callData,
+        })
+
+        log('Quote result:', result)
+
+        if (!result.data) {
+          throw new Error('No data returned from quoter')
+        }
+
+        // Decode the result
+        const decoded = decodeFunctionResult({
+          abi: quoterAbi,
+          functionName: 'quoteExactOutputSingle',
+          data: result.data,
+        })
+
+        log('Decoded result:', decoded)
+
+        const ethRequired = decoded[0] as bigint
+
+        // Add 5% slippage buffer
+        const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
+
+        log('ETH required:', formatEther(ethRequired), 'with slippage:', formatEther(ethWithSlippage))
+
+        setQuote({
+          ethRequired: ethWithSlippage,
+          blocAmount,
+          quarters,
+        })
+
+        return ethWithSlippage
+      } else {
+        // Fallback to direct RPC call
+        log('Using direct RPC call (no publicClient)')
+
+        const response = await fetch('https://mainnet.base.org', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_call',
+            params: [
+              {
+                to: UNISWAP_QUOTER_V2,
+                data: encodeFunctionData({
+                  abi: quoterAbi,
+                  functionName: 'quoteExactOutputSingle',
+                  args: [{
+                    tokenIn: WETH,
+                    tokenOut: BLOC,
+                    amount: blocAmount,
+                    fee: POOL_FEE,
+                    sqrtPriceLimitX96: BigInt(0),
+                  }],
+                }),
+              },
+              'latest',
+            ],
+          }),
+        })
+
+        const result = await response.json()
+        log('RPC result:', result)
+
+        if (result.error) {
+          log('RPC error:', result.error)
+          throw new Error(result.error.message || 'Quote failed')
+        }
+
+        if (!result.result || result.result === '0x') {
+          throw new Error('Empty result from quoter - pool may not exist')
+        }
+
+        // Decode the result
+        const decoded = decodeFunctionResult({
+          abi: quoterAbi,
+          functionName: 'quoteExactOutputSingle',
+          data: result.result,
+        })
+
+        const ethRequired = decoded[0] as bigint
+        const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
+
+        log('ETH required:', formatEther(ethRequired), 'with slippage:', formatEther(ethWithSlippage))
+
+        setQuote({
+          ethRequired: ethWithSlippage,
+          blocAmount,
+          quarters,
+        })
+
+        return ethWithSlippage
       }
-
-      // Decode the result - first 32 bytes is amountIn
-      const ethRequired = BigInt(result.result.slice(0, 66))
-
-      // Add 5% slippage buffer
-      const ethWithSlippage = (ethRequired * BigInt(105)) / BigInt(100)
-
-      setQuote({
-        ethRequired: ethWithSlippage,
-        blocAmount,
-        quarters,
-      })
-
-      return ethWithSlippage
     } catch (err) {
       console.error('Quote error:', err)
-      setQuoteError('Failed to get price quote')
+      log('Quote error details:', err)
+
+      // Check if it's a pool-related error
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      if (errorMessage.includes('execution reverted') || errorMessage.includes('pool')) {
+        setQuoteError('No liquidity pool found')
+      } else {
+        setQuoteError('Failed to get price quote')
+      }
+
       setQuote(null)
       return null
     } finally {
