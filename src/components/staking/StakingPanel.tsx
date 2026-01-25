@@ -42,6 +42,10 @@ export function StakingPanel() {
   const [unstakeAmount, setUnstakeAmount] = useState('')
   const [error, setError] = useState('')
 
+  // Computed values - must be before hooks that depend on them
+  const parsedStakeAmount = parseBloc(stakeAmount)
+  const parsedUnstakeAmount = parseBloc(unstakeAmount)
+
   // Refetch data after successful transactions
   useEffect(() => {
     if (isApproveSuccess || isStakeSuccess || isUnstakeSuccess || isClaimSuccess) {
@@ -59,8 +63,16 @@ export function StakingPanel() {
         resetClaim()
       }
     }
-  }, [isApproveSuccess, isStakeSuccess, isUnstakeSuccess, isClaimSuccess])
+  }, [isApproveSuccess, isStakeSuccess, isUnstakeSuccess, isClaimSuccess, refetchAll, resetStake, resetApprove, resetUnstake, resetClaim])
 
+  // After approval succeeds, automatically stake
+  useEffect(() => {
+    if (isApproveSuccess && parsedStakeAmount > 0n && isConnected) {
+      handleStake(parsedStakeAmount)
+    }
+  }, [isApproveSuccess, parsedStakeAmount, isConnected, handleStake])
+
+  // Early return AFTER all hooks
   if (!isConnected) {
     return (
       <div className="card text-center">
@@ -70,8 +82,6 @@ export function StakingPanel() {
     )
   }
 
-  const parsedStakeAmount = parseBloc(stakeAmount)
-  const parsedUnstakeAmount = parseBloc(unstakeAmount)
   const requiresApproval = parsedStakeAmount > 0n && needsApproval(parsedStakeAmount)
   const hasInsufficientBalance = parsedStakeAmount > (blocBalance || 0n)
   const hasInsufficientStake = parsedUnstakeAmount > (stakedBalance || 0n)
@@ -120,13 +130,6 @@ export function StakingPanel() {
     }
     handleUnstake(parsedUnstakeAmount)
   }
-
-  // After approval succeeds, automatically stake
-  useEffect(() => {
-    if (isApproveSuccess && parsedStakeAmount > 0n) {
-      handleStake(parsedStakeAmount)
-    }
-  }, [isApproveSuccess])
 
   const isStakeLoading = isApprovePending || isApproveConfirming || isStakePending || isStakeConfirming
   const isUnstakeLoading = isUnstakePending || isUnstakeConfirming
