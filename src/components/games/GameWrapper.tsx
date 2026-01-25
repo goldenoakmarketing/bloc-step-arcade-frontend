@@ -19,6 +19,8 @@ interface GameWrapperProps {
   timeRemaining: number
   onTimeChange: (time: number) => void
   onBuyTime: () => boolean
+  isInsertingQuarter?: boolean
+  insertQuarterStatus?: 'idle' | 'approving' | 'confirming-approve' | 'buying' | 'confirming-buy'
 }
 
 interface LeaderboardEntry {
@@ -195,7 +197,9 @@ export function GameWrapper({
   quarterBalance,
   timeRemaining,
   onTimeChange,
-  onBuyTime
+  onBuyTime,
+  isInsertingQuarter = false,
+  insertQuarterStatus = 'idle',
 }: GameWrapperProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
   const [score, setScore] = useState(0)
@@ -376,14 +380,30 @@ export function GameWrapper({
               </>
             ) : (
               <>
-                <p className="text-muted text-sm mb-6">Insert a quarter to play</p>
+                <p className="text-muted text-sm mb-6">Insert a quarter to play (250 BLOC)</p>
                 <button
                   onClick={startGame}
                   className="btn btn-primary btn-lg btn-full"
-                  disabled={quarterBalance < 1}
+                  disabled={quarterBalance < 1 || isInsertingQuarter}
                 >
-                  Insert Quarter
+                  {isInsertingQuarter ? (
+                    <>
+                      <span className="spinner mr-2" />
+                      {insertQuarterStatus === 'approving' && 'Approve in Wallet...'}
+                      {insertQuarterStatus === 'confirming-approve' && 'Confirming Approval...'}
+                      {insertQuarterStatus === 'buying' && 'Confirm in Wallet...'}
+                      {insertQuarterStatus === 'confirming-buy' && 'Adding Time...'}
+                      {insertQuarterStatus === 'idle' && 'Processing...'}
+                    </>
+                  ) : quarterBalance < 1 ? (
+                    'Need 250 BLOC'
+                  ) : (
+                    'Insert Quarter'
+                  )}
                 </button>
+                {quarterBalance < 1 && (
+                  <p className="text-xs text-muted mt-2">Buy BLOC tokens to play</p>
+                )}
               </>
             )}
             <button
