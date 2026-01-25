@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useConnect } from 'wagmi'
 import { CoinButton } from '@/components/ui/CoinButton'
 import { StakingPanel } from '@/components/staking/StakingPanel'
 import { LOCALPAY_ENABLED } from '@/config/features'
 import { useFarcaster } from '@/providers/FarcasterProvider'
+import { useQuarters } from '@/hooks/useQuarters'
+import { formatUnits } from 'viem'
 
 export default function ProfilePage() {
   const [purchaseAmount, setPurchaseAmount] = useState(4) // quarters
@@ -14,8 +17,49 @@ export default function ProfilePage() {
   // Farcaster context
   const { user: farcasterUser, isInFarcaster } = useFarcaster()
 
-  // User data - will come from backend/wallet
-  const [quarterBalance, setQuarterBalance] = useState(0)
+  // Quarters hook for wallet interaction
+  const {
+    isConnected,
+    quarterBalance,
+    blocBalance,
+    formattedBlocBalance,
+    formattedTimeBalance,
+    isApprovePending,
+    isApproveConfirming,
+    isApproveSuccess,
+    isBuyPending,
+    isBuyConfirming,
+    isBuySuccess,
+    handleApprove,
+    handleBuyQuarters,
+    needsApproval,
+    hasSufficientBalance,
+    getQuarterCost,
+    refetchAll,
+    resetApprove,
+    resetBuy,
+    QUARTER_AMOUNT,
+  } = useQuarters()
+
+  // Wallet connection
+  const { connect, connectors } = useConnect()
+
+  // Refetch data after successful transactions
+  useEffect(() => {
+    if (isApproveSuccess) {
+      refetchAll()
+      resetApprove()
+    }
+  }, [isApproveSuccess, refetchAll, resetApprove])
+
+  useEffect(() => {
+    if (isBuySuccess) {
+      refetchAll()
+      resetBuy()
+      setCustomAmount('')
+    }
+  }, [isBuySuccess, refetchAll, resetBuy])
+
   const totalLost = '0'
 
   // Linked accounts - Farcaster comes from SDK, others from backend
@@ -39,29 +83,35 @@ export default function ProfilePage() {
     return `${mins}m`
   }
 
-  // Calculate donation (1 in 8 goes to pool)
+  // Calculate donation (1 in 8 goes to pool) - this happens in the contract via yeet
   const getDonationAmount = (quarters: number) => Math.floor(quarters / 8)
 
   const handleClaim = (found: number) => {
-    setQuarterBalance(prev => prev + found)
-    // In real app, this would call API
+    // In real app, this would call the contract
+    refetchAll()
   }
 
   const handleLose = () => {
-    if (quarterBalance > 0) {
-      setQuarterBalance(prev => prev - 1)
-      // In real app, this would add to lost pool
+    // In real app, this would call the yeet contract
+  }
+
+  const handleConnect = () => {
+    // Try Farcaster connector first, then injected
+    const farcasterConnector = connectors.find(c => c.name.toLowerCase().includes('farcaster'))
+    const connector = farcasterConnector || connectors[0]
+    if (connector) {
+      connect({ connector })
     }
   }
 
   const handleBuy = () => {
     const amount = customAmount ? parseInt(customAmount) : purchaseAmount
-    if (amount > 0) {
-      const donation = getDonationAmount(amount)
-      const received = amount - donation
-      setQuarterBalance(prev => prev + received)
-      setCustomAmount('')
-      // In real app: payment processing, donation goes to pool
+    if (amount > 0 && isConnected) {
+      if (needsApproval(amount)) {
+        handleApprove(amount)
+      } else {
+        handleBuyQuarters(amount)
+      }
     }
   }
 
@@ -72,6 +122,21 @@ export default function ProfilePage() {
 
   const effectiveAmount = customAmount ? parseInt(customAmount) || 0 : purchaseAmount
   const donationAmount = getDonationAmount(effectiveAmount)
+  const totalCost = getQuarterCost(effectiveAmount)
+  const formattedCost = formatUnits(totalCost, 18)
+  const canAfford = hasSufficientBalance(effectiveAmount)
+  const needsApprovalForAmount = needsApproval(effectiveAmount)
+
+  // Determine button state
+  const isLoading = isApprovePending || isApproveConfirming || isBuyPending || isBuyConfirming
+  const getButtonText = () => {
+    if (!isConnected) return 'Connect Wallet'
+    if (isApprovePending || isApproveConfirming) return 'Approving...'
+    if (isBuyPending || isBuyConfirming) return 'Buying...'
+    if (!canAfford) return 'Insufficient BLOC'
+    if (needsApprovalForAmount) return `Approve ${formattedCost} BLOC`
+    return `Buy ${effectiveAmount} Quarter${effectiveAmount !== 1 ? 's' : ''}`
+  }
 
   return (
     <div className="min-h-screen px-4 py-8">
@@ -186,7 +251,12 @@ export default function ProfilePage() {
           <div className="text-center mb-6">
             <div className="text-sm text-muted mb-1">Quarter Balance</div>
             <div className="text-4xl font-bold text-gradient">{formatQuarters(quarterBalance)}</div>
-            <div className="text-sm text-muted mt-1">{formatTime(quarterBalance)} playtime available</div>
+            <div className="text-sm text-muted mt-1">{formattedTimeBalance} playtime available</div>
+            {isConnected && (
+              <div className="text-xs text-zinc-500 mt-2">
+                BLOC Balance: {formattedBlocBalance}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-[#27272a] pt-4">
@@ -210,6 +280,7 @@ export default function ProfilePage() {
               <input
                 type="number"
                 min="1"
+                max="100"
                 placeholder="Custom amount"
                 value={customAmount}
                 onChange={(e) => setCustomAmount(e.target.value)}
@@ -225,28 +296,32 @@ export default function ProfilePage() {
                   <span className="text-muted">Purchase:</span>
                   <span>{effectiveAmount}Q ({formatTime(effectiveAmount)} playtime)</span>
                 </div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-muted">Cost:</span>
+                  <span className={!canAfford && isConnected ? 'text-red-400' : ''}>{formattedCost} BLOC</span>
+                </div>
                 {donationAmount > 0 && (
                   <div className="flex justify-between mb-1 text-yellow-500">
-                    <span>Donated to pool:</span>
-                    <span>{donationAmount}Q (1 in 8)</span>
+                    <span>Yeet trigger:</span>
+                    <span>Every 8th quarter</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold border-t border-zinc-700 pt-1 mt-1">
                   <span>You receive:</span>
-                  <span className="text-gradient">{effectiveAmount - donationAmount}Q</span>
+                  <span className="text-gradient">{effectiveAmount}Q</span>
                 </div>
               </div>
             )}
 
             <button
-              onClick={handleBuy}
-              className="btn btn-success btn-full"
-              disabled={effectiveAmount < 1}
+              onClick={isConnected ? handleBuy : handleConnect}
+              className={`btn btn-full ${!isConnected || (canAfford && !isLoading) ? 'btn-success' : 'btn-secondary'}`}
+              disabled={isConnected && (effectiveAmount < 1 || isLoading || !canAfford)}
             >
-              Buy {effectiveAmount} Quarter{effectiveAmount !== 1 ? 's' : ''}
+              {getButtonText()}
             </button>
             <p className="text-xs text-muted text-center mt-2">
-              1 Quarter = 15 min session • Timer starts when you play
+              1 Quarter = 250 BLOC = 15 min session
             </p>
           </div>
         </div>
@@ -284,7 +359,7 @@ export default function ProfilePage() {
             <button
               className="btn btn-primary"
               onClick={handleLose}
-              disabled={quarterBalance === 0}
+              disabled={!isConnected || quarterBalance === 0}
             >
               Lose 1Q
             </button>
