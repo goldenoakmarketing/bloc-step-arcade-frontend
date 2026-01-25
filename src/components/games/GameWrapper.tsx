@@ -18,9 +18,11 @@ interface GameWrapperProps {
   quarterBalance: number
   timeRemaining: number
   onTimeChange: (time: number) => void
-  onBuyTime: () => boolean
+  onBuyTime: () => 'started' | 'has-time' | 'failed'
   isInsertingQuarter?: boolean
   insertQuarterStatus?: 'idle' | 'approving' | 'confirming-approve' | 'buying' | 'confirming-buy'
+  pendingGameStart?: boolean
+  onGameStarted?: () => void
 }
 
 interface LeaderboardEntry {
@@ -200,6 +202,8 @@ export function GameWrapper({
   onBuyTime,
   isInsertingQuarter = false,
   insertQuarterStatus = 'idle',
+  pendingGameStart = false,
+  onGameStarted,
 }: GameWrapperProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
   const [score, setScore] = useState(0)
@@ -210,12 +214,25 @@ export function GameWrapper({
   const [playerRank, setPlayerRank] = useState(0)
   const lastTapRef = useRef<number>(0)
   const doubleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const prevTimeRef = useRef(timeRemaining)
 
   // Load high score from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(`highscore_${gameId}`)
     if (saved) setHighScore(parseInt(saved))
   }, [gameId])
+
+  // Auto-start game when pending and time becomes available
+  useEffect(() => {
+    if (pendingGameStart && timeRemaining > 0 && prevTimeRef.current === 0 && gameState === 'ready') {
+      // Time was just added, auto-start the game
+      setScore(0)
+      setIsNewHighScore(false)
+      setGameState('playing')
+      onGameStarted?.()
+    }
+    prevTimeRef.current = timeRemaining
+  }, [pendingGameStart, timeRemaining, gameState, onGameStarted])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -263,8 +280,17 @@ export function GameWrapper({
   const startGame = () => {
     // If no time remaining, need to buy time first
     if (timeRemaining <= 0) {
-      if (!onBuyTime()) return // Failed to buy time
+      const result = onBuyTime()
+      if (result === 'started') {
+        // Transaction started, game will auto-start after confirmation
+        return
+      } else if (result === 'failed') {
+        // Failed to start transaction
+        return
+      }
+      // result === 'has-time' means we can proceed (shouldn't happen here since timeRemaining <= 0)
     }
+    // Has time, start the game
     setScore(0)
     setIsNewHighScore(false)
     setGameState('playing')

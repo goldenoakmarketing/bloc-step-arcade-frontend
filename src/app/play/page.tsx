@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { GAMES, GameWrapper, getGameById } from '@/components/games'
 import { useQuarters } from '@/hooks/useQuarters'
 
 export default function PlayPage() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(0) // Local time for gameplay
+  const [pendingGameStart, setPendingGameStart] = useState(false) // Auto-start after tx confirms
 
   const {
     isConnected,
@@ -29,20 +30,31 @@ export default function PlayPage() {
 
   const [isInserting, setIsInserting] = useState(false)
 
+  // Refs to prevent re-triggering (one-shot flags)
+  const buyTriggeredRef = useRef(false)
+  const completedRef = useRef(false)
+
   // After successful buy, add time and reset states
   useEffect(() => {
-    if (isBuySuccess && isInserting) {
+    if (isBuySuccess && isInserting && !completedRef.current) {
+      completedRef.current = true // Prevent re-entry
       setTimeRemaining(prev => prev + QUARTER_DURATION) // Add 15 minutes
       refetchAll()
-      resetBuy()
-      resetApprove()
-      setIsInserting(false)
+      // Reset after a short delay to ensure state is stable
+      setTimeout(() => {
+        resetBuy()
+        resetApprove()
+        setIsInserting(false)
+        buyTriggeredRef.current = false
+        completedRef.current = false
+      }, 100)
     }
   }, [isBuySuccess, isInserting, refetchAll, resetBuy, resetApprove, QUARTER_DURATION])
 
-  // After approval succeeds, automatically buy quarter
+  // After approval succeeds, automatically buy quarter (once only)
   useEffect(() => {
-    if (isApproveSuccess && isInserting && !isBuyPending && !isBuyConfirming) {
+    if (isApproveSuccess && isInserting && !isBuyPending && !isBuyConfirming && !buyTriggeredRef.current) {
+      buyTriggeredRef.current = true // Prevent re-triggering
       handleBuyQuarters(1)
     }
   }, [isApproveSuccess, isInserting, isBuyPending, isBuyConfirming, handleBuyQuarters])
@@ -67,21 +79,31 @@ export default function PlayPage() {
   }
 
   // Insert quarter - triggers blockchain flow
-  const handleBuyTime = useCallback(() => {
-    if (!isConnected) return false
-    if (!hasSufficientBalance(1)) return false
-    if (isInserting) return false
+  // Returns 'started' if tx flow begins, 'has-time' if already has time, 'failed' otherwise
+  const handleBuyTime = useCallback((): 'started' | 'has-time' | 'failed' => {
+    // If already has time, don't need to buy
+    if (timeRemaining > 0) return 'has-time'
+
+    if (!isConnected) return 'failed'
+    if (!hasSufficientBalance(1)) return 'failed'
+    if (isInserting) return 'failed' // Already in progress
+
+    // Reset refs for new flow
+    buyTriggeredRef.current = false
+    completedRef.current = false
 
     setIsInserting(true)
+    setPendingGameStart(true) // Will auto-start game after tx confirms
 
     if (needsApproval(1)) {
       handleApprove(1)
     } else {
+      buyTriggeredRef.current = true // Mark as triggered since we're calling buy directly
       handleBuyQuarters(1)
     }
 
-    return true // Return true to indicate flow started (actual time added after tx confirms)
-  }, [isConnected, hasSufficientBalance, needsApproval, handleApprove, handleBuyQuarters, isInserting])
+    return 'started' // Transaction flow started, game will start after confirmation
+  }, [isConnected, hasSufficientBalance, needsApproval, handleApprove, handleBuyQuarters, isInserting, timeRemaining])
 
   // Update time remaining (called by GameWrapper)
   const handleTimeChange = useCallback((newTime: number) => {
@@ -110,6 +132,8 @@ export default function PlayPage() {
         onBuyTime={handleBuyTime}
         isInsertingQuarter={isInserting}
         insertQuarterStatus={getInsertStatus()}
+        pendingGameStart={pendingGameStart}
+        onGameStarted={() => setPendingGameStart(false)}
       >
         {(props) => <GameComponent {...props} />}
       </GameWrapper>
