@@ -7,7 +7,8 @@ export default function InfoPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="text-4xl mb-4">🪙</div>
-          <h1 className="text-2xl font-bold mb-2">How Bloc Step Works</h1>
+          <h1 className="text-2xl font-bold mb-1">How BSA Works</h1>
+          <p className="text-zinc-500 text-xs tracking-wide uppercase mb-2">bloc step arcade</p>
           <p className="text-muted text-sm">Building a real-world economy, one quarter at a time</p>
         </div>
 

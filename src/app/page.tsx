@@ -16,19 +16,29 @@ export default function HomePage() {
 
         {/* HERO SECTION */}
         <div className="text-center mb-10">
+          {/* BSA Branding */}
+          <div className="mb-6">
+            <h1 className="text-5xl sm:text-6xl font-black tracking-tight bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(168,85,247,0.4)]">
+              BSA
+            </h1>
+            <p className="text-zinc-500 text-sm tracking-widest uppercase mt-1">
+              bloc step arcade
+            </p>
+          </div>
+
           {/* Animated arcade icon */}
-          <div className="text-6xl mb-6 animate-pulse drop-shadow-[0_0_25px_rgba(168,85,247,0.5)]">
+          <div className="text-5xl mb-4 animate-pulse drop-shadow-[0_0_25px_rgba(168,85,247,0.5)]">
             🕹️
           </div>
 
           {/* Headline */}
-          <h1 className="text-3xl sm:text-4xl font-black mb-4 leading-tight">
+          <h2 className="text-2xl sm:text-3xl font-black mb-4 leading-tight">
             <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent">
               YOUR QUARTERS
             </span>
             <br />
             <span className="text-white">ARE WAITING</span>
-          </h1>
+          </h2>
 
           {/* Subheadline */}
           <p className="text-zinc-400 text-lg mb-8 max-w-xs mx-auto">
@@ -403,6 +413,9 @@ export default function HomePage() {
 
         {/* TAGLINE */}
         <div className="text-center">
+          <p className="text-zinc-600 text-xs font-medium">
+            BSA
+          </p>
           <p className="text-zinc-700 text-xs">
             Built on Base • Powered by $BLOC
           </p>
