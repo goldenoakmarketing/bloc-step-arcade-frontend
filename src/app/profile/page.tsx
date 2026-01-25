@@ -4,21 +4,25 @@ import { useState } from 'react'
 import { CoinButton } from '@/components/ui/CoinButton'
 import { StakingPanel } from '@/components/staking/StakingPanel'
 import { LOCALPAY_ENABLED } from '@/config/features'
+import { useFarcaster } from '@/providers/FarcasterProvider'
 
 export default function ProfilePage() {
   const [purchaseAmount, setPurchaseAmount] = useState(4) // quarters
   const [customAmount, setCustomAmount] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false) // Swayze mode
 
+  // Farcaster context
+  const { user: farcasterUser, isInFarcaster } = useFarcaster()
+
   // User data - will come from backend/wallet
   const [quarterBalance, setQuarterBalance] = useState(0)
   const totalLost = '0'
 
-  // Linked accounts - will come from backend
+  // Linked accounts - Farcaster comes from SDK, others from backend
   const linkedAccounts = {
-    localpay: null,
-    farcaster: null,
-    basens: null,
+    localpay: null as string | null,
+    farcaster: farcasterUser?.username ? `@${farcasterUser.username}` : null,
+    basens: null as string | null,
   }
 
   const formatQuarters = (quarters: number) => {
@@ -74,9 +78,17 @@ export default function ProfilePage() {
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] mx-auto mb-4 flex items-center justify-center text-2xl">
-            {isAnonymous ? '👻' : '🎮'}
-          </div>
+          {farcasterUser?.pfpUrl && !isAnonymous ? (
+            <img
+              src={farcasterUser.pfpUrl}
+              alt="Profile"
+              className="w-16 h-16 rounded-full mx-auto mb-4 object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] mx-auto mb-4 flex items-center justify-center text-2xl">
+              {isAnonymous ? '👻' : '🎮'}
+            </div>
+          )}
           {isAnonymous ? (
             <>
               <h1 className="text-xl font-bold text-zinc-500 italic">Swayze</h1>
@@ -86,6 +98,18 @@ export default function ProfilePage() {
             <>
               <h1 className="text-xl font-bold text-emerald-400">{linkedAccounts.localpay}</h1>
               <p className="text-muted text-sm">Primary identity</p>
+            </>
+          ) : farcasterUser?.displayName || farcasterUser?.username ? (
+            <>
+              <h1 className="text-xl font-bold text-purple-400">
+                {farcasterUser.displayName || `@${farcasterUser.username}`}
+              </h1>
+              {farcasterUser.displayName && farcasterUser.username && (
+                <p className="text-muted text-sm">@{farcasterUser.username}</p>
+              )}
+              {!farcasterUser.displayName && (
+                <p className="text-muted text-sm">Farcaster user</p>
+              )}
             </>
           ) : (
             <>
@@ -130,11 +154,13 @@ export default function ProfilePage() {
             {/* Farcaster */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-purple-400 text-lg">●</span>
+                <span className={linkedAccounts.farcaster ? "text-purple-400 text-lg" : "text-purple-800 text-lg"}>●</span>
                 <span className="text-sm">Farcaster</span>
               </div>
               {linkedAccounts.farcaster ? (
                 <span className="text-purple-400 text-sm font-medium">{linkedAccounts.farcaster}</span>
+              ) : isInFarcaster ? (
+                <span className="text-purple-700 text-sm">No username</span>
               ) : (
                 <button className="text-xs text-muted hover:text-white">Link</button>
               )}
