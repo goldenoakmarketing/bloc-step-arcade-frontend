@@ -5,6 +5,9 @@ import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceip
 import { formatEther, formatUnits, encodeFunctionData, encodeAbiParameters, parseAbiParameters, concat, decodeFunctionResult, toHex } from 'viem'
 import { DATA_SUFFIX } from '@/config/builder'
 
+// RPC URL - use Alchemy if provided, otherwise fallback to public RPC
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'
+
 // Uniswap V4 addresses on Base mainnet
 const UNISWAP_V4_QUOTER = '0x0d5e0f971ed27fbff6c2837bf31316121532048d' as const
 const UNISWAP_UNIVERSAL_ROUTER = '0x6ff5693b99212da76ad316178a184ab56d299b43' as const
@@ -227,7 +230,7 @@ export function useSwapEthForBloc() {
         return ethRequired
       } else {
         // Fallback to direct RPC call
-        const response = await fetch('https://mainnet.base.org', {
+        const response = await fetch(RPC_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
