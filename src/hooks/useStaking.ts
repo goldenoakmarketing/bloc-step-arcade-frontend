@@ -5,7 +5,8 @@ import { parseUnits, formatUnits, encodeFunctionData, concat } from 'viem'
 import { contracts, blocTokenAbi, stakingPoolAbi } from '@/config/contracts'
 import { DATA_SUFFIX } from '@/config/builder'
 
-// BLOC token has 9 decimals
+// BLOC token has 9 decimals (not 18!)
+// 250 BLOC raw = 250,000,000,000 smallest units
 const BLOC_DECIMALS = 9
 
 export function useStaking() {

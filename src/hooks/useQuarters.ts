@@ -5,7 +5,8 @@ import { formatUnits, encodeFunctionData, concat } from 'viem'
 import { contracts, blocTokenAbi, arcadeVaultAbi } from '@/config/contracts'
 import { DATA_SUFFIX } from '@/config/builder'
 
-// BLOC token has 9 decimals
+// BLOC token has 9 decimals (not 18!)
+// 250 BLOC raw = 250,000,000,000 smallest units
 const BLOC_DECIMALS = 9
 
 // 1 quarter = 250 BLOC, duration = 900 seconds (15 min)

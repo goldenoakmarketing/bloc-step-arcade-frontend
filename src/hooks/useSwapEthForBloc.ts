@@ -14,7 +14,8 @@ const BLOC = '0x022c6cb9Fd69A99cF030cB43e3c28BF82bF68Fe9' as const
 // Pool fee tier (0.3% = 3000, 1% = 10000) - using 1% for smaller tokens
 const POOL_FEE = 10000
 
-// BLOC token has 9 decimals
+// BLOC token has 9 decimals (not 18!)
+// 250 BLOC raw = 250,000,000,000 smallest units
 const BLOC_DECIMALS = 9
 
 // 1 quarter = 250 BLOC
