@@ -5,14 +5,8 @@ import { parseUnits, formatUnits, encodeFunctionData, concat } from 'viem'
 import { contracts, blocTokenAbi, stakingPoolAbi } from '@/config/contracts'
 import { DATA_SUFFIX } from '@/config/builder'
 
-// BLOC token has 9 decimals (not 18!)
-// 250 BLOC raw = 250,000,000,000 smallest units
-const BLOC_DECIMALS = 9 as const
-
-// Log on module load to verify constant
-if (typeof window !== 'undefined') {
-  console.log('[useStaking] BLOC_DECIMALS =', BLOC_DECIMALS)
-}
+// BLOC token has 18 decimals (standard ERC20)
+const BLOC_DECIMALS = 18
 
 export function useStaking() {
   const { address, isConnected } = useAccount()
@@ -141,21 +135,10 @@ export function useStaking() {
   // Format helpers
   const formatBloc = (value: bigint | undefined) => {
     if (!value) return '0.00'
-    const formatted = formatUnits(value, BLOC_DECIMALS)
-    const asNumber = Number(formatted)
-    const display = asNumber.toLocaleString('en-US', {
+    return Number(formatUnits(value, BLOC_DECIMALS)).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
-    // Debug logging
-    console.log('[useStaking] formatBloc:', {
-      raw: value?.toString(),
-      decimals: BLOC_DECIMALS,
-      formatted,
-      asNumber,
-      display,
-    })
-    return display
   }
 
   const parseBloc = (value: string) => {
