@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Web3Provider } from '@/providers/Web3Provider'
 import { Header } from '@/components/layout/Header'
+import { OnChatWidget } from '@/components/chat/OnChatWidget'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
             {children}
           </main>
           <Header />
+          <OnChatWidget />
         </Web3Provider>
       </body>
     </html>
