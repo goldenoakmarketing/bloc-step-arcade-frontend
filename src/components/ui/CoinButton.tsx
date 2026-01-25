@@ -15,7 +15,7 @@ interface ClaimInfo {
   totalClaimed: number
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
 
 export function CoinButton({ onClaim }: CoinButtonProps) {
   const [isPressed, setIsPressed] = useState(false)
