@@ -91,7 +91,7 @@ export function OnChatWidget() {
 
       {/* Chat panel - expands from top right */}
       <div
-        className={`fixed z-40 bg-[#09090b] border border-[#27272a] rounded-lg shadow-xl overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`fixed z-40 bg-[#09090b] border border-[#27272a] rounded-lg shadow-xl transition-all duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         style={{
@@ -99,6 +99,8 @@ export function OnChatWidget() {
           right: '12px',
           width: isOpen ? 'min(calc(100vw - 24px), 360px)' : '0px',
           height: isOpen ? 'min(calc(100vh - 140px), 500px)' : '0px',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <div
@@ -106,9 +108,27 @@ export function OnChatWidget() {
           style={{
             width: '100%',
             height: '100%',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
           }}
         />
       </div>
+
+      {/* CSS to ensure OnChat widget elements fill the container */}
+      <style jsx global>{`
+        #onchat-widget > * {
+          width: 100% !important;
+          height: 100% !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        #onchat-widget iframe {
+          flex: 1 !important;
+          min-height: 0 !important;
+        }
+      `}</style>
 
       <Script
         src="https://onchat.sebayaki.com/widget.js"
