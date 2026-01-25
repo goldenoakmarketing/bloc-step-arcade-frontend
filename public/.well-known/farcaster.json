@@ -1,8 +1,8 @@
 {
   "accountAssociation": {
-    "header": "TODO_SIGN_WITH_FARCASTER_ACCOUNT",
-    "payload": "TODO_SIGN_WITH_FARCASTER_ACCOUNT",
-    "signature": "TODO_SIGN_WITH_FARCASTER_ACCOUNT"
+    "header": "eyJmaWQiOjE0NDQ1OTgsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg3ZUIzNzMyYTRjNTg0NkU2RDllODhlZEJBMDllNzYwNmQ5NTlkQzhFIn0",
+    "payload": "eyJkb21haW4iOiJibG9jc3RlcGFyY2FkZS5uZXRsaWZ5LmFwcCJ9",
+    "signature": "jGRjkpMWPbzXL+Jk7mEeSiPt5mqVy4rsJrFOBflI18cveWZx1b+vX+q5AdTky1HRwckUnJPVuPK3IFnnxuIXoxw="
   },
   "miniapp": {
     "version": "1",
