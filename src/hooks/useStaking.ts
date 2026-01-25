@@ -7,7 +7,12 @@ import { DATA_SUFFIX } from '@/config/builder'
 
 // BLOC token has 9 decimals (not 18!)
 // 250 BLOC raw = 250,000,000,000 smallest units
-const BLOC_DECIMALS = 9
+const BLOC_DECIMALS = 9 as const
+
+// Log on module load to verify constant
+if (typeof window !== 'undefined') {
+  console.log('[useStaking] BLOC_DECIMALS =', BLOC_DECIMALS)
+}
 
 export function useStaking() {
   const { address, isConnected } = useAccount()

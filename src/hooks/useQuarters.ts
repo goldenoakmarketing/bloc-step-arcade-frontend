@@ -7,7 +7,12 @@ import { DATA_SUFFIX } from '@/config/builder'
 
 // BLOC token has 9 decimals (not 18!)
 // 250 BLOC raw = 250,000,000,000 smallest units
-const BLOC_DECIMALS = 9
+const BLOC_DECIMALS = 9 as const
+
+// Log on module load to verify constant
+if (typeof window !== 'undefined') {
+  console.log('[useQuarters] BLOC_DECIMALS =', BLOC_DECIMALS)
+}
 
 // 1 quarter = 250 BLOC, duration = 900 seconds (15 min)
 const BLOC_PER_QUARTER = 250
