@@ -13,6 +13,9 @@ const BLOC_PER_QUARTER = 250
 const QUARTER_AMOUNT = BigInt(BLOC_PER_QUARTER) * BigInt(10 ** BLOC_DECIMALS) // 250 BLOC in smallest unit
 const QUARTER_DURATION = 900 // 15 minutes in seconds
 
+// Approve a large amount to avoid re-approving each time (1 million BLOC)
+const APPROVAL_AMOUNT = BigInt(1_000_000) * BigInt(10 ** BLOC_DECIMALS)
+
 export function useQuarters() {
   const { address, isConnected } = useAccount()
 
@@ -81,13 +84,12 @@ export function useQuarters() {
     return blocBalance >= cost
   }
 
-  // Handle approve
-  const handleApprove = (quarterCount: number) => {
-    const cost = getQuarterCost(quarterCount)
+  // Handle approve - approves a large amount to avoid re-approving each time
+  const handleApprove = (_quarterCount: number) => {
     const data = encodeFunctionData({
       abi: blocTokenAbi,
       functionName: 'approve',
-      args: [contracts.arcadeVault, cost],
+      args: [contracts.arcadeVault, APPROVAL_AMOUNT],
     })
     approve({
       to: contracts.blocToken,

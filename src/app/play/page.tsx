@@ -51,13 +51,17 @@ export default function PlayPage() {
     }
   }, [isBuySuccess, isInserting, refetchAll, resetBuy, resetApprove, QUARTER_DURATION])
 
-  // After approval succeeds, automatically buy quarter (once only)
+  // After approval succeeds, refetch allowance then buy quarter (once only)
   useEffect(() => {
     if (isApproveSuccess && isInserting && !isBuyPending && !isBuyConfirming && !buyTriggeredRef.current) {
       buyTriggeredRef.current = true // Prevent re-triggering
-      handleBuyQuarters(1)
+      // Refetch to ensure allowance is updated, then buy after a short delay
+      refetchAll()
+      setTimeout(() => {
+        handleBuyQuarters(1)
+      }, 500) // Give time for blockchain state to propagate
     }
-  }, [isApproveSuccess, isInserting, isBuyPending, isBuyConfirming, handleBuyQuarters])
+  }, [isApproveSuccess, isInserting, isBuyPending, isBuyConfirming, handleBuyQuarters, refetchAll])
 
   const formatQuarters = (quarters: number) => {
     return `${quarters}Q`
