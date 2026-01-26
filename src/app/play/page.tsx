@@ -1,46 +1,130 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
+import { encodeFunctionData } from 'viem'
 import { GAMES, GameWrapper, getGameById } from '@/components/games'
 import { useQuarters } from '@/hooks/useQuarters'
 import { useArcadeTimer } from '@/contexts/ArcadeTimerContext'
-import { ArcadeTimer } from '@/components/ArcadeTimer'
+import { contracts, blocTokenAbi } from '@/config/contracts'
+
+// 1 quarter = 250 BLOC
+const QUARTER_AMOUNT = BigInt(250) * BigInt(10 ** 18)
 
 export default function PlayPage() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
+  const [pendingTxHash, setPendingTxHash] = useState<`0x${string}` | undefined>()
 
   const {
     isConnected,
-    quarterBalance, // How many quarters user can afford (from BLOC balance)
+    quarterBalance,
+    refetchAll,
   } = useQuarters()
 
   const {
     timeRemaining,
-    quartersUsed,
-    lostQuarters,
-    insertQuarter,
+    addTime,
     formatTime,
   } = useArcadeTimer()
 
-  // Calculate available quarters from BLOC balance minus used quarters
-  const availableQuarters = Math.max(0, quarterBalance - quartersUsed)
+  // Transaction hooks for inserting quarter (transfer BLOC to ArcadeVault)
+  const {
+    sendTransactionAsync,
+    isPending: isSendPending,
+    reset: resetSend,
+  } = useSendTransaction()
+
+  const {
+    isLoading: isConfirming,
+    isSuccess: isConfirmed,
+  } = useWaitForTransactionReceipt({
+    hash: pendingTxHash,
+  })
+
+  const isPurchasing = isSendPending || isConfirming
 
   const formatQuarters = (quarters: number) => {
     return `${quarters}Q`
   }
 
-  // Insert quarter - uses global timer context
-  const handleBuyTime = useCallback((): 'started' | 'has-time' | 'failed' => {
+  // Insert quarter - transfers 250 BLOC to ArcadeVault, then adds time
+  const handleBuyTime = useCallback(async (): Promise<'started' | 'has-time' | 'failed'> => {
     // If already has time, don't need to insert another quarter
     if (timeRemaining > 0) return 'has-time'
 
     if (!isConnected) return 'failed'
-    if (availableQuarters < 1) return 'failed'
+    if (quarterBalance < 1) return 'failed'
 
-    // Insert quarter via global context, passing fresh availableQuarters value
-    const success = insertQuarter(availableQuarters)
-    return success ? 'started' : 'failed'
-  }, [isConnected, availableQuarters, timeRemaining, insertQuarter])
+    try {
+      // Encode transfer call: transfer 250 BLOC to ArcadeVault
+      const data = encodeFunctionData({
+        abi: blocTokenAbi,
+        functionName: 'transfer',
+        args: [contracts.arcadeVault, QUARTER_AMOUNT],
+      })
+
+      // Send transaction and wait for hash
+      const hash = await sendTransactionAsync({
+        to: contracts.blocToken,
+        data,
+      })
+
+      setPendingTxHash(hash)
+
+      // Wait for confirmation by polling (simple approach)
+      // In production, you might want to use useWaitForTransactionReceipt more elegantly
+      const receipt = await waitForTransaction(hash)
+
+      if (receipt.status === 'success') {
+        // Add time to timer
+        addTime()
+        // Refetch BLOC balance so UI updates everywhere
+        refetchAll()
+        resetSend()
+        setPendingTxHash(undefined)
+        return 'started'
+      } else {
+        resetSend()
+        setPendingTxHash(undefined)
+        return 'failed'
+      }
+    } catch (error) {
+      console.error('Insert quarter failed:', error)
+      resetSend()
+      setPendingTxHash(undefined)
+      return 'failed'
+    }
+  }, [isConnected, quarterBalance, timeRemaining, sendTransactionAsync, addTime, refetchAll, resetSend])
+
+  // Simple transaction wait helper
+  async function waitForTransaction(hash: `0x${string}`): Promise<{ status: 'success' | 'reverted' }> {
+    // Poll for receipt
+    const maxAttempts = 60 // 60 seconds max
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      try {
+        const response = await fetch(`https://mainnet.base.org`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_getTransactionReceipt',
+            params: [hash],
+            id: 1,
+          }),
+        })
+        const data = await response.json()
+        if (data.result) {
+          return {
+            status: data.result.status === '0x1' ? 'success' : 'reverted',
+          }
+        }
+      } catch (e) {
+        // Continue polling
+      }
+    }
+    throw new Error('Transaction confirmation timeout')
+  }
 
   // If a game is selected, show it
   if (selectedGame) {
@@ -58,9 +142,10 @@ export default function PlayPage() {
         gameName={game.meta.name}
         gameIcon={game.meta.icon}
         onExit={() => setSelectedGame(null)}
-        quarterBalance={availableQuarters}
+        quarterBalance={quarterBalance}
         timeRemaining={timeRemaining}
         onBuyTime={handleBuyTime}
+        isPurchasing={isPurchasing}
       >
         {(props) => <GameComponent {...props} />}
       </GameWrapper>
@@ -78,16 +163,11 @@ export default function PlayPage() {
           {isConnected ? (
             <div className="mt-4 flex flex-col items-center gap-3">
               <div className="flex justify-center gap-3">
-                <span className="badge">{formatQuarters(availableQuarters)} available</span>
+                <span className="badge">{formatQuarters(quarterBalance)} available</span>
                 {timeRemaining > 0 && (
                   <span className="badge badge-success">{formatTime(timeRemaining)} remaining</span>
                 )}
               </div>
-              {lostQuarters > 0 && (
-                <span className="badge bg-red-500/20 text-red-400 border-red-500/50">
-                  {lostQuarters}Q lost to pool
-                </span>
-              )}
             </div>
           ) : (
             <div className="mt-4">
@@ -128,11 +208,8 @@ export default function PlayPage() {
             <span className="text-xl">💡</span>
             <div className="text-sm">
               <p className="text-muted">
-                <span className="text-white">1 quarter = 15 minutes</span> of arcade time.
+                <span className="text-white">1 quarter = 250 BLOC = 15 minutes</span> of arcade time.
                 Play as many games as you want while time remains!
-              </p>
-              <p className="text-muted mt-2">
-                <span className="text-yellow-400">Warning:</span> Leaving within 1 minute of inserting a quarter loses it to the pool!
               </p>
             </div>
           </div>

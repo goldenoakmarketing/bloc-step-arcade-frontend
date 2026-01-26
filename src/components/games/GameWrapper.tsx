@@ -17,7 +17,8 @@ interface GameWrapperProps {
   onExit: () => void
   quarterBalance: number
   timeRemaining: number
-  onBuyTime: () => 'started' | 'has-time' | 'failed'
+  onBuyTime: () => Promise<'started' | 'has-time' | 'failed'>
+  isPurchasing?: boolean
 }
 
 interface LeaderboardEntry {
@@ -208,8 +209,10 @@ export function GameWrapper({
   quarterBalance,
   timeRemaining,
   onBuyTime,
+  isPurchasing = false,
 }: GameWrapperProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
+  const [isInsertingQuarter, setIsInsertingQuarter] = useState(false)
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(0)
   const [showShareCard, setShowShareCard] = useState(false)
@@ -259,16 +262,25 @@ export function GameWrapper({
     }
   }, [gameState, timeRemaining, handleGameOver])
 
-  const startGame = () => {
+  const startGame = async () => {
     // If no time remaining, need to insert a quarter first
     if (timeRemaining <= 0) {
-      const result = onBuyTime()
-      if (result === 'failed') {
-        // No quarters available
+      setIsInsertingQuarter(true)
+      try {
+        const result = await onBuyTime()
+        if (result === 'failed') {
+          // No quarters available or transaction failed
+          setIsInsertingQuarter(false)
+          return
+        }
+        // result === 'started' means quarter was inserted and time added
+        // result === 'has-time' means we already had time (shouldn't happen here)
+      } catch (error) {
+        console.error('Failed to insert quarter:', error)
+        setIsInsertingQuarter(false)
         return
       }
-      // result === 'started' means quarter was inserted and time added
-      // result === 'has-time' means we already had time (shouldn't happen here)
+      setIsInsertingQuarter(false)
     }
     // Has time, start the game
     setScore(0)
@@ -276,8 +288,14 @@ export function GameWrapper({
     setGameState('playing')
   }
 
-  const addMoreTime = () => {
-    onBuyTime()
+  const addMoreTime = async () => {
+    setIsInsertingQuarter(true)
+    try {
+      await onBuyTime()
+    } catch (error) {
+      console.error('Failed to add time:', error)
+    }
+    setIsInsertingQuarter(false)
   }
 
   const togglePause = () => {
@@ -386,15 +404,21 @@ export function GameWrapper({
               </>
             ) : (
               <>
-                <p className="text-muted text-sm mb-6">Insert a quarter to play</p>
+                <p className="text-muted text-sm mb-6">
+                  {isInsertingQuarter || isPurchasing ? 'Confirm in wallet...' : 'Insert a quarter to play'}
+                </p>
                 <button
                   onClick={startGame}
                   className="btn btn-primary btn-lg btn-full"
-                  disabled={quarterBalance < 1}
+                  disabled={quarterBalance < 1 || isInsertingQuarter || isPurchasing}
                 >
-                  {quarterBalance < 1 ? 'Need BLOC to Play' : 'Insert Quarter'}
+                  {isInsertingQuarter || isPurchasing
+                    ? 'Inserting Quarter...'
+                    : quarterBalance < 1
+                    ? 'Need BLOC to Play'
+                    : 'Insert Quarter (250 BLOC)'}
                 </button>
-                {quarterBalance < 1 && (
+                {quarterBalance < 1 && !isInsertingQuarter && !isPurchasing && (
                   <p className="text-xs text-muted mt-2">Buy BLOC tokens to get quarters</p>
                 )}
               </>
