@@ -13,11 +13,9 @@ interface ArcadeTimerContextType {
   // Quarter tracking
   quartersUsed: number
   lostQuarters: number
-  availableQuarters: number
 
   // Actions
-  insertQuarter: () => boolean
-  setAvailableQuarters: (quarters: number) => void
+  insertQuarter: (availableQuarters: number) => boolean
 
   // Formatters
   formatTime: (seconds: number) => string
@@ -42,7 +40,6 @@ export function ArcadeTimerProvider({ children }: ArcadeTimerProviderProps) {
   const [timeRemaining, setTimeRemaining] = useState(0)
   const [quartersUsed, setQuartersUsed] = useState(0)
   const [lostQuarters, setLostQuarters] = useState(0)
-  const [availableQuarters, setAvailableQuarters] = useState(0)
 
   // Track when last quarter was inserted (for abandon detection)
   const [lastQuarterTimestamp, setLastQuarterTimestamp] = useState<number | null>(null)
@@ -164,7 +161,8 @@ export function ArcadeTimerProvider({ children }: ArcadeTimerProviderProps) {
   }, [lastQuarterTimestamp, lastQuarterTimeValue, timeRemaining, quartersUsed, lostQuarters])
 
   // Insert a quarter - adds time and tracks for abandonment
-  const insertQuarter = useCallback((): boolean => {
+  // Takes availableQuarters as parameter to ensure fresh value
+  const insertQuarter = useCallback((availableQuarters: number): boolean => {
     if (availableQuarters < 1) return false
 
     setQuartersUsed(prev => prev + 1)
@@ -173,7 +171,7 @@ export function ArcadeTimerProvider({ children }: ArcadeTimerProviderProps) {
     setLastQuarterTimeValue(QUARTER_DURATION)
 
     return true
-  }, [availableQuarters])
+  }, [])
 
   // Format time as MM:SS
   const formatTime = useCallback((seconds: number): string => {
@@ -191,9 +189,7 @@ export function ArcadeTimerProvider({ children }: ArcadeTimerProviderProps) {
         isActive,
         quartersUsed,
         lostQuarters,
-        availableQuarters,
         insertQuarter,
-        setAvailableQuarters,
         formatTime,
       }}
     >

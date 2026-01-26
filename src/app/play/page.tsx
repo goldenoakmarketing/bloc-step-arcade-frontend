@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { GAMES, GameWrapper, getGameById } from '@/components/games'
 import { useQuarters } from '@/hooks/useQuarters'
 import { useArcadeTimer } from '@/contexts/ArcadeTimerContext'
@@ -19,17 +19,11 @@ export default function PlayPage() {
     quartersUsed,
     lostQuarters,
     insertQuarter,
-    setAvailableQuarters,
     formatTime,
   } = useArcadeTimer()
 
-  // Sync available quarters from BLOC balance
+  // Calculate available quarters from BLOC balance minus used quarters
   const availableQuarters = Math.max(0, quarterBalance - quartersUsed)
-
-  // Update context with available quarters
-  useEffect(() => {
-    setAvailableQuarters(availableQuarters)
-  }, [availableQuarters, setAvailableQuarters])
 
   const formatQuarters = (quarters: number) => {
     return `${quarters}Q`
@@ -43,8 +37,8 @@ export default function PlayPage() {
     if (!isConnected) return 'failed'
     if (availableQuarters < 1) return 'failed'
 
-    // Insert quarter via global context
-    const success = insertQuarter()
+    // Insert quarter via global context, passing fresh availableQuarters value
+    const success = insertQuarter(availableQuarters)
     return success ? 'started' : 'failed'
   }, [isConnected, availableQuarters, timeRemaining, insertQuarter])
 
