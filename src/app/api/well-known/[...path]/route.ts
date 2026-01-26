@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Farcaster Mini App manifest - inline to avoid filesystem issues on serverless
+// Version: 2 - updated 2026-01-26 with arcade cabinet splash image
 const farcasterManifest = {
+  _version: "2.0.0", // For cache debugging - remove later
   accountAssociation: {
     header: "eyJmaWQiOjE0NDQ1OTgsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg3ZUIzNzMyYTRjNTg0NkU2RDllODhlZEJBMDllNzYwNmQ5NTlkQzhFIn0",
     payload: "eyJkb21haW4iOiJibG9jc3RlcGFyY2FkZS5uZXRsaWZ5LmFwcCJ9",
