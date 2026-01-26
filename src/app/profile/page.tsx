@@ -1,22 +1,31 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useConnect } from 'wagmi'
-import { formatEther } from 'viem'
+import { useAccount, useConnect, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
+import { formatEther, encodeFunctionData } from 'viem'
 import { CoinButton } from '@/components/ui/CoinButton'
 import { StakingPanel } from '@/components/staking/StakingPanel'
 import { LOCALPAY_ENABLED } from '@/config/features'
 import { useFarcaster } from '@/providers/FarcasterProvider'
 import { useQuarters } from '@/hooks/useQuarters'
 import { useSwapEthForBloc } from '@/hooks/useSwapEthForBloc'
+import { contracts, blocTokenAbi } from '@/config/contracts'
+
+// 1 quarter = 250 BLOC
+const QUARTER_AMOUNT = BigInt(250) * BigInt(10 ** 18)
 
 export default function ProfilePage() {
   const [purchaseAmount, setPurchaseAmount] = useState(4) // quarters
   const [customAmount, setCustomAmount] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false) // Swayze mode
+  const [loseSuccess, setLoseSuccess] = useState(false)
+  const [loseError, setLoseError] = useState<string | null>(null)
 
   // Farcaster context
   const { user: farcasterUser, isInFarcaster } = useFarcaster()
+
+  // Get wallet address for API call
+  const { address } = useAccount()
 
   // Quarters hook for reading balances
   const {
@@ -43,6 +52,21 @@ export default function ProfilePage() {
     formatBlocAmount,
   } = useSwapEthForBloc()
 
+  // Lose quarter transaction hooks
+  const {
+    sendTransaction: sendLose,
+    data: loseTxHash,
+    isPending: isLosePending,
+    reset: resetLose,
+  } = useSendTransaction()
+
+  const {
+    isLoading: isLoseConfirming,
+    isSuccess: isLoseSuccess,
+  } = useWaitForTransactionReceipt({
+    hash: loseTxHash,
+  })
+
   // Wallet connection
   const { connect, connectors } = useConnect()
 
@@ -63,6 +87,39 @@ export default function ProfilePage() {
       setCustomAmount('')
     }
   }, [isSwapSuccess, refetchAll, resetSwap])
+
+  // Handle successful lose quarter transaction
+  useEffect(() => {
+    if (isLoseSuccess && loseTxHash && address) {
+      // Call backend to update pool balance
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/pool/deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          quarters: 1,
+          txHash: loseTxHash,
+        }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to record deposit')
+          return res.json()
+        })
+        .then(() => {
+          setLoseSuccess(true)
+          refetchAll()
+          resetLose()
+          // Clear success message after 3 seconds
+          setTimeout(() => setLoseSuccess(false), 3000)
+        })
+        .catch((err) => {
+          console.error('Failed to record deposit:', err)
+          // Still refetch balances since on-chain transfer succeeded
+          refetchAll()
+          resetLose()
+        })
+    }
+  }, [isLoseSuccess, loseTxHash, address, refetchAll, resetLose])
 
   const totalLost = '0'
 
@@ -94,7 +151,21 @@ export default function ProfilePage() {
   }
 
   const handleLose = () => {
-    // In real app, this would call the yeet contract
+    if (!isConnected || quarterBalance === 0) return
+
+    setLoseError(null)
+
+    // Encode transfer call: transfer 250 BLOC to PoolPayout contract
+    const data = encodeFunctionData({
+      abi: blocTokenAbi,
+      functionName: 'transfer',
+      args: [contracts.poolPayout, QUARTER_AMOUNT],
+    })
+
+    sendLose({
+      to: contracts.blocToken,
+      data,
+    })
   }
 
   const handleConnect = () => {
@@ -359,13 +430,19 @@ export default function ProfilePage() {
             <div>
               <div className="font-medium">Lose a Quarter</div>
               <div className="text-sm text-muted">Leave for others to find</div>
+              {loseSuccess && (
+                <div className="text-sm text-green-400 mt-1">Quarter donated to pool!</div>
+              )}
+              {loseError && (
+                <div className="text-sm text-red-400 mt-1">{loseError}</div>
+              )}
             </div>
             <button
               className="btn btn-primary"
               onClick={handleLose}
-              disabled={!isConnected || quarterBalance === 0}
+              disabled={!isConnected || quarterBalance === 0 || isLosePending || isLoseConfirming}
             >
-              Lose 1Q
+              {isLosePending || isLoseConfirming ? 'Sending...' : 'Lose 1Q'}
             </button>
           </div>
         </div>
