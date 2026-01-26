@@ -14,7 +14,7 @@ const farcasterManifest = {
     iconUrl: "https://lirp.cdn-website.com/05350d13/dms3rep/multi/opt/BLOC-1920w.jpg",
     imageUrl: "https://lirp.cdn-website.com/05350d13/dms3rep/multi/opt/BLOC-1920w.jpg",
     buttonTitle: "Play Now",
-    splashImageUrl: "https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg",
+    splashImageUrl: "https://lirp.cdn-website.com/05350d13/dms3rep/multi/opt/BLOC-1920w.jpg",
     splashBackgroundColor: "#000000",
     subtitle: "Web3 arcade on Base",
     description: "Play games, earn rewards, and stake BLOC tokens. The arcade where everyone wins.",

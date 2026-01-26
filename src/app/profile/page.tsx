@@ -370,7 +370,7 @@ export default function ProfilePage() {
 
             {/* Purchase summary */}
             {effectiveAmount > 0 && (
-              <div className="bg-zinc-900/50 rounded-lg p-3 mb-4 text-sm">
+              <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 mb-4 text-sm">
                 <div className="flex justify-between mb-1">
                   <span className="text-muted">Purchase:</span>
                   <span>{effectiveAmount}Q ({formatTime(effectiveAmount)} playtime)</span>

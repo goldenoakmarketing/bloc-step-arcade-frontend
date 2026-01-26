@@ -13,11 +13,11 @@ export default function InfoPage() {
         </div>
 
         {/* Token Economics */}
-        <div className="card mb-4 border-purple-500/30 bg-purple-950/20">
+        <div className="card mb-4 border-purple-500/30">
           <h2 className="font-bold mb-3 flex items-center gap-2">
             <span>🪙</span> Token Economics
           </h2>
-          <div className="bg-zinc-900/50 rounded-lg p-4 mb-3">
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-4 mb-3">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-gradient">1Q</div>
@@ -78,7 +78,7 @@ export default function InfoPage() {
           <p className="text-sm text-muted leading-relaxed mb-3">
             Running low on time? No need to stop your game.
           </p>
-          <div className="bg-zinc-900/50 rounded-lg p-3 space-y-3 text-sm">
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 space-y-3 text-sm">
             <div className="flex items-start gap-3">
               <span className="text-2xl">👆👆</span>
               <div>
@@ -109,7 +109,7 @@ export default function InfoPage() {
             Quarters flow through the ecosystem. They get lost, they get found.
             It's the circle of arcade life.
           </p>
-          <div className="bg-zinc-900/50 rounded-lg p-3 space-y-2 text-sm">
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">Every 8th quarter purchased</span>
               <span className="text-yellow-500">→ Pool</span>
@@ -138,7 +138,7 @@ export default function InfoPage() {
             The Lost & Found pool has a cap of 2500 quarters. When quarters overflow,
             they don't disappear — they <span className="text-white">automatically</span> feed the ecosystem.
           </p>
-          <div className="bg-zinc-900/50 rounded-lg p-3 text-sm">
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 text-sm">
             <div className="text-center mb-2">
               <span className="text-emerald-400 text-xs font-medium px-2 py-0.5 bg-emerald-400/10 rounded-full">
                 ⚡ AUTOMATIC
@@ -186,7 +186,7 @@ export default function InfoPage() {
             $BLOC isn't just arcade currency — it's a <span className="text-white">social token</span> built for community.
             Tip players, support creators, show love.
           </p>
-          <div className="bg-zinc-900/50 rounded-lg p-3 mb-3">
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 mb-3">
             <div className="text-xs font-bold text-purple-400 tracking-wider mb-2">HOW TO TIP</div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-3">
@@ -199,7 +199,7 @@ export default function InfoPage() {
               </div>
             </div>
           </div>
-          <div className="bg-zinc-900/50 rounded-lg p-3 mb-3 text-sm">
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 mb-3 text-sm">
             <div className="text-xs font-bold text-purple-400 tracking-wider mb-2">WHERE IT WORKS</div>
             <ul className="text-muted space-y-1.5">
               <li className="flex items-start gap-2">
@@ -240,7 +240,7 @@ export default function InfoPage() {
         </div>
 
         {/* TL;DR */}
-        <div className="card bg-zinc-900/30">
+        <div className="card">
           <h2 className="font-bold mb-3">TL;DR</h2>
           <ul className="text-sm text-muted space-y-2">
             <li className="flex items-start gap-2">

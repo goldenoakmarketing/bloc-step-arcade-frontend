@@ -207,7 +207,7 @@ export default function HomePage() {
             }
           `}</style>
 
-          <div className="bg-zinc-950 rounded-2xl p-6">
+          <div className="bg-black/60 backdrop-blur-lg rounded-2xl p-6">
             {/* Header */}
             <div className="text-center mb-6">
               <span className="text-sm font-black tracking-widest bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
@@ -308,7 +308,7 @@ export default function HomePage() {
         <div className="grid grid-cols-2 gap-3 mb-10">
           {/* PLAY */}
           <Link href="/play" className="group">
-            <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all">
+            <div className="card h-full border border-white/10 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all">
               <div className="text-3xl mb-2">🎮</div>
               <div className="font-bold text-white mb-1">PLAY</div>
               <p className="text-xs text-zinc-500">1 quarter (250 BLOC) = 15 min of arcade time.</p>
@@ -317,7 +317,7 @@ export default function HomePage() {
 
           {/* FIND */}
           <Link href="/profile" className="group">
-            <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-green-500/50 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)] transition-all">
+            <div className="card h-full border border-white/10 hover:border-green-500/50 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)] transition-all">
               <div className="text-3xl mb-2">🎁</div>
               <div className="font-bold text-white mb-1">FIND</div>
               <p className="text-xs text-zinc-500">Check Lost & Found. Claim free quarters daily.</p>
@@ -326,7 +326,7 @@ export default function HomePage() {
 
           {/* STAKE */}
           <Link href="/profile" className="group">
-            <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-yellow-500/50 hover:shadow-[0_0_20px_rgba(234,179,8,0.15)] transition-all">
+            <div className="card h-full border border-white/10 hover:border-yellow-500/50 hover:shadow-[0_0_20px_rgba(234,179,8,0.15)] transition-all">
               <div className="text-3xl mb-2">💰</div>
               <div className="font-bold text-white mb-1">STAKE</div>
               <p className="text-xs text-zinc-500">Earn rewards from real usage, not inflation.</p>
@@ -335,7 +335,7 @@ export default function HomePage() {
 
           {/* DONATE */}
           <Link href="/profile" className="group">
-            <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-pink-500/50 hover:shadow-[0_0_20px_rgba(236,72,153,0.15)] transition-all">
+            <div className="card h-full border border-white/10 hover:border-pink-500/50 hover:shadow-[0_0_20px_rgba(236,72,153,0.15)] transition-all">
               <div className="text-3xl mb-2">💸</div>
               <div className="font-bold text-white mb-1">DONATE</div>
               <p className="text-xs text-zinc-500">Leave quarters for others to find.</p>
@@ -344,7 +344,7 @@ export default function HomePage() {
 
           {/* TIP */}
           <Link href="/info" className="group">
-            <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] transition-all">
+            <div className="card h-full border border-white/10 hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)] transition-all">
               <div className="text-3xl mb-2">💬</div>
               <div className="font-bold text-white mb-1">TIP</div>
               <p className="text-xs text-zinc-500">Send $BLOC to players & creators. No middleman.</p>
@@ -353,7 +353,7 @@ export default function HomePage() {
 
           {/* COMPETE */}
           <Link href="/leaderboard" className="group">
-            <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)] transition-all">
+            <div className="card h-full border border-white/10 hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)] transition-all">
               <div className="text-3xl mb-2">🏆</div>
               <div className="font-bold text-white mb-1">COMPETE</div>
               <p className="text-xs text-zinc-500">Climb the leaderboards. Bragging rights await.</p>
