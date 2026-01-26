@@ -107,17 +107,30 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
   const [copied, setCopied] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
 
-  // Only use the public frontend URL for sharing - no backend URLs
+  // URLs for sharing
   const appUrl = 'https://blocsteparcade.netlify.app'
+  // Leaderboard image from backend - generates dynamic PNG with top players
+  const leaderboardImageUrl = `https://bloc-step-arcade-backend-production.up.railway.app/api/v1/leaderboards/image/${gameId}`
 
-  // Build share text with game-specific emoji
+  // Build share text with game-specific emoji and leaderboard rank
   const getShareText = () => {
     const scoreText = score.toLocaleString()
     const emoji = GAME_EMOJIS[gameId] || '🎮'
-    const highScoreText = isNewHighScore ? ' New high score!' : ''
-    const rankText = playerRank && playerRank <= 3 ? ` Ranked #${playerRank}!` : ''
 
-    return `Just scored ${scoreText} on ${gameName} at Bloc Step Arcade!${highScoreText}${rankText} 🎮${emoji}`
+    // Different text based on rank
+    if (playerRank === 1) {
+      return `NEW HIGH SCORE! ${scoreText} on ${gameName} - I'm #1! 🏆${emoji}`
+    } else if (playerRank === 2) {
+      return `Just scored ${scoreText} on ${gameName} - ranked #2 on the leaderboard! 🥈${emoji}`
+    } else if (playerRank === 3) {
+      return `Just scored ${scoreText} on ${gameName} - ranked #3 on the leaderboard! 🥉${emoji}`
+    } else if (playerRank && playerRank <= 10) {
+      return `Just scored ${scoreText} on ${gameName} - ranked #${playerRank} on the leaderboard! 🎮${emoji}`
+    } else if (isNewHighScore) {
+      return `New personal best! ${scoreText} on ${gameName} at Bloc Step Arcade! 🎮${emoji}`
+    } else {
+      return `Just scored ${scoreText} on ${gameName} at Bloc Step Arcade! 🎮${emoji}`
+    }
   }
 
   // Share to Farcaster - use SDK if inside Farcaster, otherwise open URL
@@ -127,26 +140,38 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
     try {
       if (isInFarcaster) {
         // Use Farcaster Mini App SDK to open native cast composer
-        // Only embed the app URL - no backend image URLs
+        // Embed the leaderboard image for rich preview
         await sdk.actions.composeCast({
           text: getShareText(),
-          embeds: [appUrl],
+          embeds: [leaderboardImageUrl] as `https://${string}`[],
         })
+        onShare()
       } else {
-        // Fall back to opening Warpcast compose URL in browser
+        // Outside Farcaster - open Warpcast compose URL in browser
+        const text = encodeURIComponent(getShareText())
+        const embed = encodeURIComponent(leaderboardImageUrl)
+        const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
+        window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
+        onShare()
+      }
+    } catch (error) {
+      console.error('Failed to share via SDK:', error)
+      // Fall back to opening Warpcast URL
+      try {
         const text = encodeURIComponent(getShareText())
         const embed = encodeURIComponent(appUrl)
         const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
-        window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
+
+        if (isInFarcaster) {
+          // Use SDK openUrl for Farcaster environment
+          await sdk.actions.openUrl(warpcastUrl)
+        } else {
+          window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
+        }
+        onShare()
+      } catch (fallbackError) {
+        console.error('Fallback share also failed:', fallbackError)
       }
-      onShare()
-    } catch (error) {
-      console.error('Failed to share:', error)
-      // Fall back to URL approach if SDK fails
-      const text = encodeURIComponent(getShareText())
-      const embed = encodeURIComponent(appUrl)
-      const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
-      window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
     } finally {
       setIsSharing(false)
     }
