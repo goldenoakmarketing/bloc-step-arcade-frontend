@@ -55,28 +55,36 @@ function getLeaderboard(gameId: string, playerScore: number): { entries: Leaderb
 
 function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const [copied, setCopied] = useState(false)
 
-  const handleShare = async () => {
-    const rankText = playerRank <= 5 ? `Ranked #${playerRank}! ` : ''
+  const appUrl = 'https://blocsteparcade.netlify.app'
+  const leaderboardUrl = `${appUrl}/leaderboard`
 
-    // Try native share if available
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${gameName} - Bloc Step Arcade`,
-          text: `I scored ${score.toLocaleString()} on ${gameName}! ${rankText}${isNewHighScore ? 'New high score! ' : ''}Play at Bloc Step Arcade`,
-          url: window.location.origin,
-        })
-      } catch (e) {
-        // User cancelled or error
-      }
-    } else {
-      // Fallback: copy to clipboard
-      const text = `I scored ${score.toLocaleString()} on ${gameName}! ${rankText}${isNewHighScore ? 'New high score! ' : ''}Play at Bloc Step Arcade ${window.location.origin}`
-      navigator.clipboard.writeText(text)
-      alert('Copied to clipboard!')
-    }
+  // Build share text
+  const getShareText = () => {
+    const scoreText = score.toLocaleString()
+    const highScoreText = isNewHighScore ? ' New high score!' : ''
+    const rankText = playerRank <= 3 ? ` Ranked #${playerRank}!` : ''
+
+    return `Just scored ${scoreText} on ${gameName} at Bloc Step Arcade!${highScoreText}${rankText} 🎮`
+  }
+
+  // Share to Farcaster via Warpcast compose URL
+  const handleShareFarcaster = () => {
+    const text = encodeURIComponent(getShareText())
+    const embed = encodeURIComponent(leaderboardUrl)
+    const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
+
+    window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
     onShare()
+  }
+
+  // Copy to clipboard fallback
+  const handleCopyToClipboard = async () => {
+    const text = `${getShareText()}\n\n${leaderboardUrl}`
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -169,10 +177,16 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leade
         {/* Actions */}
         <div className="mt-4 space-y-3">
           <button
-            onClick={handleShare}
+            onClick={handleShareFarcaster}
             className="btn btn-primary btn-full flex items-center justify-center gap-2"
           >
-            <span>Share</span>
+            <span>Share on Farcaster</span>
+          </button>
+          <button
+            onClick={handleCopyToClipboard}
+            className="btn btn-secondary btn-full flex items-center justify-center gap-2"
+          >
+            <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
           </button>
           <button
             onClick={onClose}
