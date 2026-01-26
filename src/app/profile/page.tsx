@@ -9,6 +9,7 @@ import { LOCALPAY_ENABLED } from '@/config/features'
 import { useFarcaster } from '@/providers/FarcasterProvider'
 import { useQuarters } from '@/hooks/useQuarters'
 import { useSwapEthForBloc } from '@/hooks/useSwapEthForBloc'
+import { usePlayer } from '@/hooks/useApi'
 import { contracts, blocTokenAbi } from '@/config/contracts'
 
 // 1 quarter = 250 BLOC
@@ -26,6 +27,9 @@ export default function ProfilePage() {
 
   // Get wallet address for API call
   const { address } = useAccount()
+
+  // Player stats from backend
+  const { data: playerData } = usePlayer()
 
   // Quarters hook for reading balances
   const {
@@ -121,7 +125,7 @@ export default function ProfilePage() {
     }
   }, [isLoseSuccess, loseTxHash, address, refetchAll, resetLose])
 
-  const totalLost = '0'
+  const totalLost = playerData?.stats?.totalYeeted?.toString() || '0'
 
   // Linked accounts - Farcaster comes from SDK, others from backend
   const linkedAccounts = {

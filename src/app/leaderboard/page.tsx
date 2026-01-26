@@ -1,8 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLeaderboards } from '@/hooks/useApi'
 
 type LeaderboardType = 'lost' | 'staking' | 'time'
+
+interface LeaderboardEntry {
+  rank: number
+  name: string | null
+  type: string | null
+  anonymous: boolean
+  score: string
+}
 
 const tabs: { id: LeaderboardType; label: string }[] = [
   { id: 'lost', label: 'Donations' },
@@ -10,16 +19,24 @@ const tabs: { id: LeaderboardType; label: string }[] = [
   { id: 'time', label: 'Time Played' },
 ]
 
-// Leaderboard data - will come from backend
-const leaderboardData: Record<LeaderboardType, { rank: number; name: string | null; type: string | null; anonymous: boolean; score: string }[]> = {
-  lost: [],
-  staking: [],
-  time: [],
+const formatBlocAmount = (score: string) => {
+  const num = Number(score) / 1e18
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
+  return num.toFixed(0)
+}
+
+const formatTimeSeconds = (seconds: number) => {
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}h ${mins}m`
+  return `${mins}m`
 }
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('lost')
   const [totalDonated, setTotalDonated] = useState<number>(0)
+  const { yeet, staking, time, isLoading } = useLeaderboards(20)
 
   // Fetch total donated from backend
   useEffect(() => {
@@ -38,6 +55,31 @@ export default function LeaderboardPage() {
     }
     fetchTotalDonated()
   }, [])
+
+  const leaderboardData: Record<LeaderboardType, LeaderboardEntry[]> = {
+    lost: yeet.map(e => ({
+      rank: e.rank,
+      name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
+      type: e.farcasterUsername ? 'farcaster' : null,
+      anonymous: false,
+      score: `${e.score}Q`
+    })),
+    staking: staking.map(e => ({
+      rank: e.rank,
+      name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
+      type: e.farcasterUsername ? 'farcaster' : null,
+      anonymous: false,
+      score: formatBlocAmount(e.score)
+    })),
+    time: time.map(e => ({
+      rank: e.rank,
+      name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
+      type: e.farcasterUsername ? 'farcaster' : null,
+      anonymous: false,
+      score: formatTimeSeconds(Number(e.score))
+    }))
+  }
+
   const entries = leaderboardData[activeTab]
 
   const getRankDisplay = (rank: number) => {
@@ -91,7 +133,11 @@ export default function LeaderboardPage() {
 
         {/* List */}
         <div className="card">
-          {entries.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8 text-muted">
+              <p>Loading...</p>
+            </div>
+          ) : entries.length === 0 ? (
             <div className="text-center py-8 text-muted">
               <p>No entries yet</p>
               <p className="text-xs mt-1">Be the first on the leaderboard!</p>
@@ -114,6 +160,7 @@ export default function LeaderboardPage() {
                         {entry.type === 'farcaster' && <span className="text-purple-400">{entry.name}</span>}
                         {entry.type === 'localpay' && <span className="text-emerald-400">{entry.name}</span>}
                         {entry.type === 'basens' && <span className="text-blue-400">{entry.name}</span>}
+                        {!entry.type && <span className="text-zinc-400">{entry.name}</span>}
                       </div>
                     )}
                   </div>
