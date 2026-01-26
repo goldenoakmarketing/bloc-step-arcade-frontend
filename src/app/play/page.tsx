@@ -1,35 +1,41 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { GAMES, GameWrapper, getGameById } from '@/components/games'
 import { useQuarters } from '@/hooks/useQuarters'
+import { useArcadeTimer } from '@/contexts/ArcadeTimerContext'
+import { ArcadeTimer } from '@/components/ArcadeTimer'
 
 export default function PlayPage() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
-  const [timeRemaining, setTimeRemaining] = useState(0) // Local time for gameplay
-  const [quartersUsed, setQuartersUsed] = useState(0) // Track quarters used this session
 
   const {
     isConnected,
     quarterBalance, // How many quarters user can afford (from BLOC balance)
-    QUARTER_DURATION,
   } = useQuarters()
 
-  // Available quarters = what they can afford minus what they've used this session
+  const {
+    timeRemaining,
+    quartersUsed,
+    lostQuarters,
+    insertQuarter,
+    setAvailableQuarters,
+    formatTime,
+  } = useArcadeTimer()
+
+  // Sync available quarters from BLOC balance
   const availableQuarters = Math.max(0, quarterBalance - quartersUsed)
+
+  // Update context with available quarters
+  useEffect(() => {
+    setAvailableQuarters(availableQuarters)
+  }, [availableQuarters, setAvailableQuarters])
 
   const formatQuarters = (quarters: number) => {
     return `${quarters}Q`
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  // Insert quarter - just track locally, no contract call
-  // Returns 'started' if quarter inserted, 'has-time' if already has time, 'failed' otherwise
+  // Insert quarter - uses global timer context
   const handleBuyTime = useCallback((): 'started' | 'has-time' | 'failed' => {
     // If already has time, don't need to insert another quarter
     if (timeRemaining > 0) return 'has-time'
@@ -37,17 +43,10 @@ export default function PlayPage() {
     if (!isConnected) return 'failed'
     if (availableQuarters < 1) return 'failed'
 
-    // Insert quarter locally - add time and track usage
-    setQuartersUsed(prev => prev + 1)
-    setTimeRemaining(prev => prev + QUARTER_DURATION)
-
-    return 'started'
-  }, [isConnected, availableQuarters, timeRemaining, QUARTER_DURATION])
-
-  // Update time remaining (called by GameWrapper)
-  const handleTimeChange = useCallback((newTime: number) => {
-    setTimeRemaining(newTime)
-  }, [])
+    // Insert quarter via global context
+    const success = insertQuarter()
+    return success ? 'started' : 'failed'
+  }, [isConnected, availableQuarters, timeRemaining, insertQuarter])
 
   // If a game is selected, show it
   if (selectedGame) {
@@ -67,7 +66,6 @@ export default function PlayPage() {
         onExit={() => setSelectedGame(null)}
         quarterBalance={availableQuarters}
         timeRemaining={timeRemaining}
-        onTimeChange={handleTimeChange}
         onBuyTime={handleBuyTime}
       >
         {(props) => <GameComponent {...props} />}
@@ -84,10 +82,17 @@ export default function PlayPage() {
           <h1 className="text-2xl font-bold mb-2">Arcade</h1>
           <p className="text-muted text-sm">Choose a game to play</p>
           {isConnected ? (
-            <div className="mt-4 flex justify-center gap-3">
-              <span className="badge">{formatQuarters(availableQuarters)} available</span>
-              {timeRemaining > 0 && (
-                <span className="badge badge-success">{formatTime(timeRemaining)} remaining</span>
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="flex justify-center gap-3">
+                <span className="badge">{formatQuarters(availableQuarters)} available</span>
+                {timeRemaining > 0 && (
+                  <span className="badge badge-success">{formatTime(timeRemaining)} remaining</span>
+                )}
+              </div>
+              {lostQuarters > 0 && (
+                <span className="badge bg-red-500/20 text-red-400 border-red-500/50">
+                  {lostQuarters}Q lost to pool
+                </span>
               )}
             </div>
           ) : (
@@ -131,6 +136,9 @@ export default function PlayPage() {
               <p className="text-muted">
                 <span className="text-white">1 quarter = 15 minutes</span> of arcade time.
                 Play as many games as you want while time remains!
+              </p>
+              <p className="text-muted mt-2">
+                <span className="text-yellow-400">Warning:</span> Leaving within 1 minute of inserting a quarter loses it to the pool!
               </p>
             </div>
           </div>

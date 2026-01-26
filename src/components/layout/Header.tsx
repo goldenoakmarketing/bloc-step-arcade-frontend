@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useArcadeTimer } from '@/contexts/ArcadeTimerContext'
 
 // Icons as simple SVG components
 const HomeIcon = () => (
@@ -56,12 +57,25 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname()
+  const { timeRemaining, formatTime, isActive } = useArcadeTimer()
 
   // Mock: In real app, get from wallet connection
   const walletInitial: string | undefined = undefined
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#09090b]/95 backdrop-blur border-t border-[#27272a] safe-area-bottom">
+      {/* Timer banner when active */}
+      {isActive && (
+        <div className="absolute -top-8 left-0 right-0 flex justify-center">
+          <div className={`px-4 py-1 rounded-t-lg text-sm font-mono font-bold ${
+            timeRemaining <= 60
+              ? 'bg-red-900/90 text-red-300 animate-pulse'
+              : 'bg-zinc-900/90 text-green-400'
+          }`}>
+            {formatTime(timeRemaining)} remaining
+          </div>
+        </div>
+      )}
       <div className="max-w-lg mx-auto flex justify-around items-center h-16 px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href

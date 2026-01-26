@@ -17,7 +17,6 @@ interface GameWrapperProps {
   onExit: () => void
   quarterBalance: number
   timeRemaining: number
-  onTimeChange: (time: number) => void
   onBuyTime: () => 'started' | 'has-time' | 'failed'
 }
 
@@ -208,7 +207,6 @@ export function GameWrapper({
   onExit,
   quarterBalance,
   timeRemaining,
-  onTimeChange,
   onBuyTime,
 }: GameWrapperProps) {
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
@@ -254,21 +252,12 @@ export function GameWrapper({
     // Don't auto-show share card - let user choose
   }, [score, highScore, gameId])
 
-  // Timer - counts down timeRemaining, pauses when share card is shown
+  // Watch for time running out (timer is managed globally)
   useEffect(() => {
-    if (gameState !== 'playing' || showShareCard) return
-
-    const timer = setInterval(() => {
-      if (timeRemaining <= 1) {
-        onTimeChange(0)
-        handleGameOver()
-      } else {
-        onTimeChange(timeRemaining - 1)
-      }
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [gameState, showShareCard, timeRemaining, onTimeChange, handleGameOver])
+    if (gameState === 'playing' && timeRemaining <= 0) {
+      handleGameOver()
+    }
+  }, [gameState, timeRemaining, handleGameOver])
 
   const startGame = () => {
     // If no time remaining, need to insert a quarter first

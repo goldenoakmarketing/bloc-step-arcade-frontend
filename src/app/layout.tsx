@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Web3Provider } from '@/providers/Web3Provider'
 import { FarcasterProvider } from '@/providers/FarcasterProvider'
+import { ArcadeTimerProvider } from '@/contexts/ArcadeTimerContext'
 import { Header } from '@/components/layout/Header'
 import { OnChatWidget } from '@/components/chat/OnChatWidget'
 import './globals.css'
@@ -29,11 +30,13 @@ export default function RootLayout({
       <body>
         <FarcasterProvider>
           <Web3Provider>
-            <main className="pb-20">
-              {children}
-            </main>
-            <Header />
-            <OnChatWidget />
+            <ArcadeTimerProvider>
+              <main className="pb-20">
+                {children}
+              </main>
+              <Header />
+              <OnChatWidget />
+            </ArcadeTimerProvider>
           </Web3Provider>
         </FarcasterProvider>
       </body>
