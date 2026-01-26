@@ -143,7 +143,7 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
         // Embed the leaderboard image for rich preview
         await sdk.actions.composeCast({
           text: getShareText(),
-          embeds: [leaderboardImageUrl] as `https://${string}`[],
+          embeds: [leaderboardImageUrl as `https://${string}`],
         })
         onShare()
       } else {
