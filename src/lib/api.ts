@@ -122,3 +122,27 @@ export async function getStakingLeaderboard(limit = 20): Promise<LeaderboardEntr
 export async function getTimePlayedLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   return fetchApi<LeaderboardEntry[]>(`/leaderboards/time-played?limit=${limit}`)
 }
+
+// Game-specific leaderboards
+export interface GameLeaderboardEntry {
+  rank: number
+  walletAddress: string
+  farcasterUsername?: string
+  score: string
+}
+
+export async function getGameLeaderboard(gameId: string, limit = 20): Promise<GameLeaderboardEntry[]> {
+  return fetchApi<GameLeaderboardEntry[]>(`/leaderboards/game/${gameId}?limit=${limit}`)
+}
+
+export async function submitGameScore(
+  walletAddress: string,
+  gameId: string,
+  score: number
+): Promise<{ id: string; gameId: string; score: string; rank: number | null }> {
+  return fetchApi(`/leaderboards/game/${gameId}/score`, {
+    method: 'POST',
+    headers: { 'X-Wallet-Address': walletAddress },
+    body: JSON.stringify({ score }),
+  })
+}

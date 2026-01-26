@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
 import { useFarcaster } from '@/providers/FarcasterProvider'
+import { useAccount } from 'wagmi'
 
 export interface GameProps {
   onScore: (points: number) => void
@@ -23,6 +24,63 @@ interface GameWrapperProps {
   isPurchasing?: boolean
 }
 
+// Game emoji map for share text
+const GAME_EMOJIS: Record<string, string> = {
+  snake: '🐍',
+  ping: '🏓',
+  drbloc: '💊',
+  solitaire: '🃏',
+  angryblocs: '😠',
+  hextris: '⬡',
+  'endless-runner': '🏃',
+  'flappy-bird': '🐦',
+  '2048': '🔢',
+}
+
+// Submit score to backend
+async function submitScore(walletAddress: string, gameId: string, score: number): Promise<{ rank: number | null }> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
+    const res = await fetch(`${apiUrl}/api/v1/leaderboards/game/${gameId}/score`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Wallet-Address': walletAddress,
+      },
+      body: JSON.stringify({ score }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      return { rank: json.data.rank }
+    }
+    return { rank: null }
+  } catch (error) {
+    console.error('Failed to submit score:', error)
+    return { rank: null }
+  }
+}
+
+// Fetch game leaderboard from backend
+async function fetchGameLeaderboard(gameId: string, limit = 5): Promise<LeaderboardEntry[]> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
+    const res = await fetch(`${apiUrl}/api/v1/leaderboards/game/${gameId}?limit=${limit}`)
+    const json = await res.json()
+    if (json.success && json.data) {
+      return json.data.map((entry: { rank: number; farcasterUsername?: string; walletAddress: string; score: string }) => ({
+        rank: entry.rank,
+        name: entry.farcasterUsername || `${entry.walletAddress.slice(0, 6)}...${entry.walletAddress.slice(-4)}`,
+        score: parseInt(entry.score),
+        isCurrentPlayer: false,
+      }))
+    }
+    return []
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error)
+    return []
+  }
+}
+
 interface LeaderboardEntry {
   rank: number
   name: string
@@ -31,6 +89,7 @@ interface LeaderboardEntry {
 }
 
 interface ShareCardProps {
+  gameId: string
   gameName: string
   gameIcon: string
   score: number
@@ -43,37 +102,25 @@ interface ShareCardProps {
   isInFarcaster: boolean
 }
 
-// Get leaderboard data - TODO: fetch from backend
-function getLeaderboard(gameId: string, playerScore: number): { entries: LeaderboardEntry[], playerRank: number } {
-  // Only show the player's score until backend leaderboard is ready
-  const entries: LeaderboardEntry[] = [{
-    rank: 1,
-    name: 'You',
-    score: playerScore,
-    isCurrentPlayer: true
-  }]
-
-  return { entries, playerRank: 1 }
-}
-
-function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare, isInFarcaster }: ShareCardProps) {
+function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare, isInFarcaster }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
 
   const appUrl = 'https://blocsteparcade.netlify.app'
   const leaderboardUrl = `${appUrl}/leaderboard`
-  // Dynamic leaderboard image for rich embeds
+  // Dynamic game-specific leaderboard image for rich embeds
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
-  const leaderboardImageUrl = `${apiUrl}/api/v1/leaderboard/image`
+  const leaderboardImageUrl = `${apiUrl}/api/v1/leaderboards/image/${gameId}`
 
-  // Build share text
+  // Build share text with game-specific emoji
   const getShareText = () => {
     const scoreText = score.toLocaleString()
+    const emoji = GAME_EMOJIS[gameId] || '🎮'
     const highScoreText = isNewHighScore ? ' New high score!' : ''
-    const rankText = playerRank <= 3 ? ` Ranked #${playerRank}!` : ''
+    const rankText = playerRank && playerRank <= 3 ? ` Ranked #${playerRank}!` : ''
 
-    return `Just scored ${scoreText} on ${gameName} at Bloc Step Arcade!${highScoreText}${rankText} 🎮`
+    return `Just scored ${scoreText} on ${gameName} at Bloc Step Arcade!${highScoreText}${rankText} 🎮${emoji}`
   }
 
   // Share to Farcaster - use SDK if inside Farcaster, otherwise open URL
@@ -243,6 +290,7 @@ export function GameWrapper({
   isPurchasing = false,
 }: GameWrapperProps) {
   const { isInFarcaster } = useFarcaster()
+  const { address } = useAccount()
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
   const [isInsertingQuarter, setIsInsertingQuarter] = useState(false)
   const [score, setScore] = useState(0)
@@ -250,7 +298,7 @@ export function GameWrapper({
   const [showShareCard, setShowShareCard] = useState(false)
   const [isNewHighScore, setIsNewHighScore] = useState(false)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [playerRank, setPlayerRank] = useState(0)
+  const [playerRank, setPlayerRank] = useState<number>(0)
   const lastTapRef = useRef<number>(0)
   const doubleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -270,7 +318,7 @@ export function GameWrapper({
     setScore(prev => prev + points)
   }, [])
 
-  const handleGameOver = useCallback(() => {
+  const handleGameOver = useCallback(async () => {
     const newHighScore = score > highScore
     if (newHighScore) {
       setHighScore(score)
@@ -278,14 +326,28 @@ export function GameWrapper({
     }
     setIsNewHighScore(newHighScore)
 
-    // Generate leaderboard with current score (for rank display)
-    const { entries, playerRank: rank } = getLeaderboard(gameId, score)
-    setLeaderboard(entries)
-    setPlayerRank(rank)
-
     setGameState('gameover')
-    // Don't auto-show share card - let user choose
-  }, [score, highScore, gameId])
+
+    // Submit score to backend and get rank
+    if (address && score > 0) {
+      const { rank } = await submitScore(address, gameId, score)
+      setPlayerRank(rank || 0)
+    }
+
+    // Fetch game leaderboard from backend
+    const entries = await fetchGameLeaderboard(gameId, 5)
+    // Mark current player in leaderboard
+    if (address) {
+      const addressLower = address.toLowerCase()
+      entries.forEach(entry => {
+        // Check if this entry matches current player (by comparing truncated address format)
+        if (entry.name.toLowerCase().startsWith(addressLower.slice(0, 6).toLowerCase())) {
+          entry.isCurrentPlayer = true
+        }
+      })
+    }
+    setLeaderboard(entries)
+  }, [score, highScore, gameId, address])
 
   // Watch for time running out (timer is managed globally)
   useEffect(() => {
@@ -367,11 +429,18 @@ export function GameWrapper({
   }
 
   // Show share card during gameplay
-  const openShareCard = () => {
-    // Generate leaderboard with current score for mid-game sharing
-    const { entries, playerRank: rank } = getLeaderboard(gameId, score)
+  const openShareCard = async () => {
+    // Fetch game leaderboard from backend for mid-game sharing
+    const entries = await fetchGameLeaderboard(gameId, 5)
+    if (address) {
+      const addressLower = address.toLowerCase()
+      entries.forEach(entry => {
+        if (entry.name.toLowerCase().startsWith(addressLower.slice(0, 6).toLowerCase())) {
+          entry.isCurrentPlayer = true
+        }
+      })
+    }
     setLeaderboard(entries)
-    setPlayerRank(rank)
     setShowShareCard(true)
   }
 
@@ -380,6 +449,7 @@ export function GameWrapper({
       {/* Share Card Modal */}
       {showShareCard && (
         <ShareCard
+          gameId={gameId}
           gameName={gameName}
           gameIcon={gameIcon}
           score={score}
