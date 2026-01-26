@@ -46,6 +46,15 @@ export function useStaking() {
     query: { enabled: true },
   })
 
+  // Read StakingPool contract's BLOC balance (to calculate rewards pool)
+  const { data: contractBalance, refetch: refetchContractBalance } = useReadContract({
+    address: contracts.blocToken,
+    abi: blocTokenAbi,
+    functionName: 'balanceOf',
+    args: [contracts.stakingPool],
+    query: { enabled: true },
+  })
+
   // Read current allowance
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: contracts.blocToken,
@@ -81,8 +90,14 @@ export function useStaking() {
     refetchStaked()
     refetchRewards()
     refetchTotalStaked()
+    refetchContractBalance()
     refetchAllowance()
   }
+
+  // Calculate rewards pool (contract balance - total staked)
+  const rewardsPool = contractBalance && totalStaked
+    ? contractBalance - totalStaked
+    : BigInt(0)
 
   // Action functions with builder code attribution
   const handleApprove = (amount: bigint) => {
@@ -165,6 +180,7 @@ export function useStaking() {
     stakedBalance,
     pendingRewards,
     totalStaked,
+    rewardsPool,
     allowance,
 
     // Formatted values
@@ -172,6 +188,7 @@ export function useStaking() {
     formattedStakedBalance: formatBloc(stakedBalance),
     formattedPendingRewards: formatBloc(pendingRewards),
     formattedTotalStaked: formatBloc(totalStaked),
+    formattedRewardsPool: formatBloc(rewardsPool),
 
     // Transaction states
     isApprovePending,
@@ -195,6 +212,7 @@ export function useStaking() {
 
     // Utilities
     refetchAll,
+    refetchRewards,
     formatBloc,
     parseBloc,
     needsApproval,

@@ -9,10 +9,12 @@ export function StakingPanel() {
     blocBalance,
     stakedBalance,
     pendingRewards,
+    totalStaked,
     formattedBlocBalance,
     formattedStakedBalance,
     formattedPendingRewards,
     formattedTotalStaked,
+    formattedRewardsPool,
     isApprovePending,
     isApproveConfirming,
     isApproveSuccess,
@@ -30,6 +32,7 @@ export function StakingPanel() {
     handleUnstake,
     handleClaimRewards,
     refetchAll,
+    refetchRewards,
     parseBloc,
     needsApproval,
     resetStake,
@@ -45,6 +48,17 @@ export function StakingPanel() {
   // Computed values - must be before hooks that depend on them
   const parsedStakeAmount = parseBloc(stakeAmount)
   const parsedUnstakeAmount = parseBloc(unstakeAmount)
+
+  // Periodic refresh of pending rewards (every 10 seconds)
+  useEffect(() => {
+    if (!isConnected) return
+
+    const interval = setInterval(() => {
+      refetchRewards()
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [isConnected, refetchRewards])
 
   // Refetch data after successful transactions
   useEffect(() => {
@@ -86,6 +100,12 @@ export function StakingPanel() {
   const hasInsufficientBalance = parsedStakeAmount > (blocBalance || 0n)
   const hasInsufficientStake = parsedUnstakeAmount > (stakedBalance || 0n)
   const hasPendingRewards = (pendingRewards || 0n) > 0n
+  const hasStakedBalance = (stakedBalance || 0n) > 0n
+
+  // Calculate user's share of pool and estimated daily rewards
+  const userSharePercent = totalStaked && stakedBalance && totalStaked > 0n
+    ? Number((stakedBalance * 10000n) / totalStaked) / 100
+    : 0
 
   const handleMaxStake = () => {
     if (blocBalance) {
@@ -146,76 +166,92 @@ export function StakingPanel() {
 
   return (
     <div className="space-y-4">
-      {/* BLOC Balance */}
+      {/* Header */}
       <div className="card">
-        <div className="text-center">
-          <div className="text-sm text-muted mb-1">Your BLOC Balance</div>
-          <div className="text-3xl font-bold text-gradient">{formattedBlocBalance} BLOC</div>
+        <h3 className="font-bold text-lg mb-1">Staking Pool</h3>
+        <p className="text-muted text-sm">Stake BLOC to earn rewards from arcade revenue</p>
+      </div>
+
+      {/* Your Position */}
+      <div className="card">
+        <div className="text-sm text-muted mb-3">Your Position</div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-xs text-muted">Your Staked</div>
+            <div className="text-xl font-bold text-gradient">{formattedStakedBalance}</div>
+            <div className="text-xs text-muted">BLOC</div>
+            {userSharePercent > 0 && (
+              <div className="text-xs text-purple-400 mt-1">{userSharePercent.toFixed(2)}% of pool</div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs text-muted">Your Rewards</div>
+            <div className="text-xl font-bold text-green-400">{formattedPendingRewards}</div>
+            <div className="text-xs text-muted">BLOC claimable</div>
+            {hasPendingRewards && (
+              <button
+                onClick={handleClaimRewards}
+                disabled={isClaimLoading}
+                className="btn btn-success text-xs py-1 px-3 mt-2"
+              >
+                {isClaimPending ? 'Confirm...' : isClaimConfirming ? 'Claiming...' : 'Claim Rewards'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Staked and Rewards Grid */}
+      {/* Unstake Section - only show if user has staked balance */}
+      {hasStakedBalance && (
+        <div className="card">
+          <div className="text-sm text-muted mb-3">Unstake</div>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              placeholder="Amount to unstake"
+              value={unstakeAmount}
+              onChange={(e) => setUnstakeAmount(e.target.value)}
+              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#8b5cf6]"
+            />
+            <button
+              onClick={handleMaxUnstake}
+              className="btn btn-secondary text-sm"
+            >
+              Max
+            </button>
+          </div>
+          <button
+            onClick={handleUnstakeClick}
+            disabled={isUnstakeLoading || parsedUnstakeAmount <= 0n}
+            className="btn btn-secondary btn-full mt-3"
+          >
+            {isUnstakePending ? 'Confirm in Wallet...' : isUnstakeConfirming ? 'Unstaking...' : 'Unstake'}
+          </button>
+        </div>
+      )}
+
+      {/* Pool Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="stat-card">
-          <div className="stat-label">Staked</div>
-          <div className="stat-value text-xl">{formattedStakedBalance}</div>
-          <div className="text-xs text-muted">BLOC</div>
-          {(stakedBalance || 0n) > 0n && (
-            <div className="mt-3">
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  placeholder="Amount"
-                  value={unstakeAmount}
-                  onChange={(e) => setUnstakeAmount(e.target.value)}
-                  className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#8b5cf6] w-full"
-                />
-                <button
-                  onClick={handleMaxUnstake}
-                  className="text-xs text-[#8b5cf6] hover:text-[#7c3aed]"
-                >
-                  Max
-                </button>
-              </div>
-              <button
-                onClick={handleUnstakeClick}
-                disabled={isUnstakeLoading || parsedUnstakeAmount <= 0n}
-                className="btn btn-secondary text-xs py-1 px-3 w-full"
-              >
-                {isUnstakePending ? 'Confirm...' : isUnstakeConfirming ? 'Unstaking...' : 'Unstake'}
-              </button>
-            </div>
-          )}
+          <div className="stat-label">Total Staked</div>
+          <div className="stat-value text-lg">{formattedTotalStaked}</div>
+          <div className="text-xs text-muted">BLOC in pool</div>
         </div>
-
         <div className="stat-card">
-          <div className="stat-label">Pending Rewards</div>
-          <div className="stat-value text-xl">{formattedPendingRewards}</div>
-          <div className="text-xs text-muted">BLOC</div>
-          {hasPendingRewards && (
-            <button
-              onClick={handleClaimRewards}
-              disabled={isClaimLoading}
-              className="btn btn-success text-xs py-1 px-3 mt-3 w-full"
-            >
-              {isClaimPending ? 'Confirm...' : isClaimConfirming ? 'Claiming...' : 'Claim'}
-            </button>
-          )}
+          <div className="stat-label">Rewards Pool</div>
+          <div className="stat-value text-lg text-green-400">{formattedRewardsPool}</div>
+          <div className="text-xs text-muted">BLOC available</div>
         </div>
-      </div>
-
-      {/* Total Staked - Pool Stats */}
-      <div className="stat-card text-center">
-        <div className="stat-label">Total Staked in Pool</div>
-        <div className="stat-value text-2xl text-gradient">{formattedTotalStaked}</div>
-        <div className="text-xs text-muted">BLOC</div>
       </div>
 
       {/* Stake Form */}
       <div className="card">
-        <h3 className="font-bold mb-4">Stake BLOC</h3>
+        <div className="flex justify-between items-center mb-3">
+          <div className="text-sm text-muted">Stake BLOC</div>
+          <div className="text-xs text-muted">Balance: {formattedBlocBalance} BLOC</div>
+        </div>
 
         <div className="flex gap-2 mb-3">
           <input
