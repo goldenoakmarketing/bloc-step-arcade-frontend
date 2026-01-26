@@ -63,6 +63,9 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leade
 
   const appUrl = 'https://blocsteparcade.netlify.app'
   const leaderboardUrl = `${appUrl}/leaderboard`
+  // Dynamic leaderboard image for rich embeds
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
+  const leaderboardImageUrl = `${apiUrl}/api/v1/leaderboard/image`
 
   // Build share text
   const getShareText = () => {
@@ -80,14 +83,16 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leade
     try {
       if (isInFarcaster) {
         // Use Farcaster Mini App SDK to open native cast composer
+        // Embed both the leaderboard image and the app URL
         await sdk.actions.composeCast({
           text: getShareText(),
-          embeds: [leaderboardUrl],
+          embeds: [leaderboardImageUrl, leaderboardUrl],
         })
       } else {
         // Fall back to opening Warpcast compose URL in browser
+        // Use image URL for richer preview
         const text = encodeURIComponent(getShareText())
-        const embed = encodeURIComponent(leaderboardUrl)
+        const embed = encodeURIComponent(leaderboardImageUrl)
         const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
         window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
       }
