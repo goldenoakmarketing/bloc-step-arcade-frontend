@@ -145,20 +145,24 @@ export default function InfoPage() {
               </span>
             </div>
             <div className="text-center mb-2 text-muted text-xs">Pool Overflow Distribution</div>
-            <div className="flex justify-center gap-8">
+            <div className="flex justify-center gap-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gradient">75%</div>
+                <div className="text-2xl font-bold text-gradient">60%</div>
                 <div className="text-xs text-muted">Staking Rewards</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">25%</div>
+                <div className="text-2xl font-bold">20%</div>
+                <div className="text-xs text-muted">Stability</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">20%</div>
                 <div className="text-xs text-muted">Operations</div>
               </div>
             </div>
           </div>
           <p className="text-xs text-muted mt-3">
-            No manual intervention. When overflow happens, 75% <span className="text-white">instantly</span> flows
-            to the staking rewards pool. The other 25% keeps the lights on.
+            No manual intervention. When overflow happens, 60% <span className="text-white">flows</span> to
+            staking rewards, distributed weekly to eligible stakers.
           </p>
         </div>
 
@@ -171,8 +175,30 @@ export default function InfoPage() {
             Stake $BLOC to earn a share of the overflow. The more the arcade gets used,
             the more rewards flow to stakers.
           </p>
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 mb-3 text-sm space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400">•</span>
+              <span><span className="text-white">Stake for 7+ days</span> to qualify for weekly rewards</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400">•</span>
+              <span>Earn up to <span className="text-white">20% of your staked amount</span> each week</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400">•</span>
+              <span>Rewards <span className="text-white">auto-deposit</span> to your wallet every Sunday</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400">•</span>
+              <span>Rewards come from <span className="text-white">60% of vault overflow</span></span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-400">•</span>
+              <span>The more the arcade is used, the <span className="text-white">bigger the rewards pool</span></span>
+            </div>
+          </div>
           <p className="text-sm text-muted leading-relaxed">
-            But remember: staking rewards come from <span className="text-white">real usage</span>,
+            Staking rewards come from <span className="text-white">real usage</span>,
             not from token inflation or ponzi mechanics. No usage = no rewards. It's that simple.
           </p>
         </div>

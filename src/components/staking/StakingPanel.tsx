@@ -2,17 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useStaking } from '@/hooks/useStaking'
+import { usePlayer } from '@/hooks/useApi'
 
 export function StakingPanel() {
   const {
     isConnected,
     blocBalance,
     stakedBalance,
-    pendingRewards,
     totalStaked,
     formattedBlocBalance,
     formattedStakedBalance,
-    formattedPendingRewards,
     formattedTotalStaked,
     formattedRewardsPool,
     isApprovePending,
@@ -24,22 +23,18 @@ export function StakingPanel() {
     isUnstakePending,
     isUnstakeConfirming,
     isUnstakeSuccess,
-    isClaimPending,
-    isClaimConfirming,
-    isClaimSuccess,
     handleApprove,
     handleStake,
     handleUnstake,
-    handleClaimRewards,
     refetchAll,
-    refetchRewards,
     parseBloc,
     needsApproval,
     resetStake,
     resetApprove,
     resetUnstake,
-    resetClaim,
   } = useStaking()
+
+  const { data: playerData } = usePlayer()
 
   const [stakeAmount, setStakeAmount] = useState('')
   const [unstakeAmount, setUnstakeAmount] = useState('')
@@ -49,20 +44,18 @@ export function StakingPanel() {
   const parsedStakeAmount = parseBloc(stakeAmount)
   const parsedUnstakeAmount = parseBloc(unstakeAmount)
 
-  // Periodic refresh of pending rewards (every 10 seconds)
-  useEffect(() => {
-    if (!isConnected) return
-
-    const interval = setInterval(() => {
-      refetchRewards()
-    }, 10000)
-
-    return () => clearInterval(interval)
-  }, [isConnected, refetchRewards])
+  // Calculate staking eligibility
+  const stakeStartedAt = playerData?.stakeStartedAt ? new Date(playerData.stakeStartedAt) : null
+  const now = new Date()
+  const daysSinceStake = stakeStartedAt
+    ? Math.floor((now.getTime() - stakeStartedAt.getTime()) / (1000 * 60 * 60 * 24))
+    : 0
+  const isEligibleForRewards = stakeStartedAt && daysSinceStake >= 7
+  const daysUntilEligible = stakeStartedAt ? Math.max(0, 7 - daysSinceStake) : 7
 
   // Refetch data after successful transactions
   useEffect(() => {
-    if (isApproveSuccess || isStakeSuccess || isUnstakeSuccess || isClaimSuccess) {
+    if (isApproveSuccess || isStakeSuccess || isUnstakeSuccess) {
       refetchAll()
       if (isStakeSuccess) {
         setStakeAmount('')
@@ -73,11 +66,8 @@ export function StakingPanel() {
         setUnstakeAmount('')
         resetUnstake()
       }
-      if (isClaimSuccess) {
-        resetClaim()
-      }
     }
-  }, [isApproveSuccess, isStakeSuccess, isUnstakeSuccess, isClaimSuccess, refetchAll, resetStake, resetApprove, resetUnstake, resetClaim])
+  }, [isApproveSuccess, isStakeSuccess, isUnstakeSuccess, refetchAll, resetStake, resetApprove, resetUnstake])
 
   // After approval succeeds, automatically stake
   useEffect(() => {
@@ -99,7 +89,6 @@ export function StakingPanel() {
   const requiresApproval = parsedStakeAmount > 0n && needsApproval(parsedStakeAmount)
   const hasInsufficientBalance = parsedStakeAmount > (blocBalance || 0n)
   const hasInsufficientStake = parsedUnstakeAmount > (stakedBalance || 0n)
-  const hasPendingRewards = (pendingRewards || 0n) > 0n
   const hasStakedBalance = (stakedBalance || 0n) > 0n
 
   // Calculate user's share of pool and estimated daily rewards
@@ -153,7 +142,6 @@ export function StakingPanel() {
 
   const isStakeLoading = isApprovePending || isApproveConfirming || isStakePending || isStakeConfirming
   const isUnstakeLoading = isUnstakePending || isUnstakeConfirming
-  const isClaimLoading = isClaimPending || isClaimConfirming
 
   const getStakeButtonText = () => {
     if (isApprovePending) return 'Approve in Wallet...'
@@ -185,24 +173,26 @@ export function StakingPanel() {
             )}
           </div>
           <div>
-            <div className="text-xs text-muted">Your Rewards</div>
-            <div className="text-xl font-bold text-green-400">{formattedPendingRewards}</div>
-            <div className="text-xs text-muted">BLOC claimable</div>
-            {hasPendingRewards && (
-              <>
-                <button
-                  onClick={handleClaimRewards}
-                  disabled={isClaimLoading}
-                  className="btn btn-success text-xs py-1 px-3 mt-2"
-                >
-                  {isClaimPending ? 'Confirm...' : isClaimConfirming ? 'Claiming...' : 'Claim Rewards'}
-                </button>
-                <div className="text-xs text-zinc-500 mt-1">No lockup period</div>
-              </>
+            <div className="text-xs text-muted">Reward Status</div>
+            {hasStakedBalance ? (
+              isEligibleForRewards ? (
+                <div className="text-lg font-bold text-green-400">Eligible</div>
+              ) : (
+                <div className="text-lg font-bold text-yellow-400">{daysUntilEligible}d left</div>
+              )
+            ) : (
+              <div className="text-lg font-bold text-zinc-500">--</div>
             )}
+            <div className="text-xs text-muted">
+              {hasStakedBalance
+                ? isEligibleForRewards
+                  ? 'Rewards auto-deposit Sundays'
+                  : 'Until eligible for rewards'
+                : 'Stake to earn rewards'}
+            </div>
           </div>
         </div>
-        <div className="text-xs text-zinc-500 mt-3">Rewards distributed weekly from arcade revenue. 75% of vault goes to stakers.</div>
+        <div className="text-xs text-zinc-500 mt-3">Rewards distributed weekly from arcade revenue. 60% of vault goes to stakers.</div>
       </div>
 
       {/* Unstake Section - only show if user has staked balance */}

@@ -83,6 +83,7 @@ export interface Player {
   farcasterUsername?: string
   timeBalance: string
   cachedStakedBalance: string
+  stakeStartedAt: string | null
   stats: {
     totalTimePurchased: string
     totalTimeConsumed: string
