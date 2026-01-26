@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { sdk } from '@farcaster/miniapp-sdk'
+import { useFarcaster } from '@/providers/FarcasterProvider'
 
 export interface GameProps {
   onScore: (points: number) => void
@@ -38,6 +40,7 @@ interface ShareCardProps {
   playerRank: number
   onClose: () => void
   onShare: () => void
+  isInFarcaster: boolean
 }
 
 // Get leaderboard data - TODO: fetch from backend
@@ -53,9 +56,10 @@ function getLeaderboard(gameId: string, playerScore: number): { entries: Leaderb
   return { entries, playerRank: 1 }
 }
 
-function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare }: ShareCardProps) {
+function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leaderboard, playerRank, onClose, onShare, isInFarcaster }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
 
   const appUrl = 'https://blocsteparcade.netlify.app'
   const leaderboardUrl = `${appUrl}/leaderboard`
@@ -69,14 +73,35 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leade
     return `Just scored ${scoreText} on ${gameName} at Bloc Step Arcade!${highScoreText}${rankText} 🎮`
   }
 
-  // Share to Farcaster via Warpcast compose URL
-  const handleShareFarcaster = () => {
-    const text = encodeURIComponent(getShareText())
-    const embed = encodeURIComponent(leaderboardUrl)
-    const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
+  // Share to Farcaster - use SDK if inside Farcaster, otherwise open URL
+  const handleShareFarcaster = async () => {
+    setIsSharing(true)
 
-    window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
-    onShare()
+    try {
+      if (isInFarcaster) {
+        // Use Farcaster Mini App SDK to open native cast composer
+        await sdk.actions.composeCast({
+          text: getShareText(),
+          embeds: [leaderboardUrl],
+        })
+      } else {
+        // Fall back to opening Warpcast compose URL in browser
+        const text = encodeURIComponent(getShareText())
+        const embed = encodeURIComponent(leaderboardUrl)
+        const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
+        window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
+      }
+      onShare()
+    } catch (error) {
+      console.error('Failed to share:', error)
+      // Fall back to URL approach if SDK fails
+      const text = encodeURIComponent(getShareText())
+      const embed = encodeURIComponent(leaderboardUrl)
+      const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
+      window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
+    } finally {
+      setIsSharing(false)
+    }
   }
 
   // Copy to clipboard fallback
@@ -178,9 +203,10 @@ function ShareCard({ gameName, gameIcon, score, highScore, isNewHighScore, leade
         <div className="mt-4 space-y-3">
           <button
             onClick={handleShareFarcaster}
+            disabled={isSharing}
             className="btn btn-primary btn-full flex items-center justify-center gap-2"
           >
-            <span>Share on Farcaster</span>
+            <span>{isSharing ? 'Opening...' : 'Share on Farcaster'}</span>
           </button>
           <button
             onClick={handleCopyToClipboard}
@@ -211,6 +237,7 @@ export function GameWrapper({
   onBuyTime,
   isPurchasing = false,
 }: GameWrapperProps) {
+  const { isInFarcaster } = useFarcaster()
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
   const [isInsertingQuarter, setIsInsertingQuarter] = useState(false)
   const [score, setScore] = useState(0)
@@ -357,6 +384,7 @@ export function GameWrapper({
           playerRank={playerRank}
           onClose={handleShareClose}
           onShare={handleShareComplete}
+          isInFarcaster={isInFarcaster}
         />
       )}
 
