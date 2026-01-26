@@ -169,7 +169,7 @@ export function StakingPanel() {
       {/* Header */}
       <div className="card">
         <h3 className="font-bold text-lg mb-1">Staking Pool</h3>
-        <p className="text-muted text-sm">Stake BLOC to earn rewards from arcade revenue</p>
+        <p className="text-muted text-sm">Stake BLOC to earn a share of arcade revenue. The more you stake, the bigger your share.</p>
       </div>
 
       {/* Your Position */}
@@ -189,16 +189,20 @@ export function StakingPanel() {
             <div className="text-xl font-bold text-green-400">{formattedPendingRewards}</div>
             <div className="text-xs text-muted">BLOC claimable</div>
             {hasPendingRewards && (
-              <button
-                onClick={handleClaimRewards}
-                disabled={isClaimLoading}
-                className="btn btn-success text-xs py-1 px-3 mt-2"
-              >
-                {isClaimPending ? 'Confirm...' : isClaimConfirming ? 'Claiming...' : 'Claim Rewards'}
-              </button>
+              <>
+                <button
+                  onClick={handleClaimRewards}
+                  disabled={isClaimLoading}
+                  className="btn btn-success text-xs py-1 px-3 mt-2"
+                >
+                  {isClaimPending ? 'Confirm...' : isClaimConfirming ? 'Claiming...' : 'Claim Rewards'}
+                </button>
+                <div className="text-xs text-zinc-500 mt-1">No lockup period</div>
+              </>
             )}
           </div>
         </div>
+        <div className="text-xs text-zinc-500 mt-3">Rewards distributed weekly from arcade revenue. 75% of vault goes to stakers.</div>
       </div>
 
       {/* Unstake Section - only show if user has staked balance */}
