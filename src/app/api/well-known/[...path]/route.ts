@@ -42,7 +42,9 @@ export async function GET(
   return NextResponse.json(farcasterManifest, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=300', // 5 minute cache
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'CDN-Cache-Control': 'no-store',
+      'Netlify-CDN-Cache-Control': 'no-store',
     },
   })
 }
