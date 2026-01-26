@@ -24,10 +24,45 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Subtle gradient background */
+/* Arcade cabinet background with dark overlay */
 body {
-  background: linear-gradient(180deg, #09090b 0%, #0f0f14 50%, #09090b 100%);
   min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -2;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: -1;
+}
+
+/* Hide background during gameplay */
+body.gameplay-active::before,
+body.gameplay-active::after {
+  display: none;
+}
+
+body.gameplay-active {
+  background: var(--background);
 }
 
 a {
@@ -35,24 +70,28 @@ a {
   text-decoration: none;
 }
 
-/* Cards with glow on hover */
+/* Cards with glow on hover - semi-transparent with blur */
 .card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(39, 39, 42, 0.8);
   border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.2s ease;
 }
 
 .card:hover {
-  background: var(--card-hover);
-  border-color: #3f3f46;
+  background: rgba(31, 31, 35, 0.9);
+  border-color: rgba(63, 63, 70, 0.9);
 }
 
-/* Glowing card variant */
+/* Glowing card variant - semi-transparent with blur */
 .card-glow {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(39, 39, 42, 0.8);
   border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.3s ease;
@@ -60,7 +99,8 @@ a {
 
 .card-glow:hover {
   border-color: var(--primary);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+  background: rgba(31, 31, 35, 0.9);
 }
 
 /* Buttons */
@@ -89,14 +129,16 @@ a {
 }
 
 .btn-secondary {
-  background: var(--card);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: white;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(39, 39, 42, 0.8);
 }
 
 .btn-secondary:hover {
-  background: var(--card-hover);
-  border-color: #3f3f46;
+  background: rgba(31, 31, 35, 0.9);
+  border-color: rgba(63, 63, 70, 0.9);
 }
 
 .btn-success {
@@ -138,10 +180,12 @@ a {
   color: var(--muted);
 }
 
-/* Stat cards */
+/* Stat cards - semi-transparent with blur */
 .stat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(39, 39, 42, 0.8);
   border-radius: 12px;
   padding: 1.25rem;
   text-align: center;
@@ -149,8 +193,9 @@ a {
 }
 
 .stat-card:hover {
-  border-color: #3f3f46;
+  border-color: rgba(63, 63, 70, 0.9);
   transform: translateY(-2px);
+  background: rgba(31, 31, 35, 0.9);
 }
 
 .stat-label {
@@ -233,8 +278,10 @@ a {
 
 .tab-active {
   color: white;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(39, 39, 42, 0.8);
 }
 
 /* Safe area for iOS devices with home bar */

@@ -329,6 +329,20 @@ export function GameWrapper({
     if (saved) setHighScore(parseInt(saved))
   }, [gameId])
 
+  // Toggle background visibility during active gameplay
+  useEffect(() => {
+    if (gameState === 'playing' || gameState === 'paused') {
+      document.body.classList.add('gameplay-active')
+    } else {
+      document.body.classList.remove('gameplay-active')
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('gameplay-active')
+    }
+  }, [gameState])
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
