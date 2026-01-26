@@ -20,7 +20,8 @@ const tabs: { id: LeaderboardType; label: string }[] = [
 ]
 
 const formatBlocAmount = (score: string) => {
-  const num = Number(score) / 1e18
+  // Score is already in tokens (not wei), no need to divide by 1e18
+  const num = Number(score)
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
   return num.toFixed(0)
