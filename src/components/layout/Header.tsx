@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useArcadeTimer } from '@/contexts/ArcadeTimerContext'
+import { useFarcaster } from '@/providers/FarcasterProvider'
 
 // Icons as simple SVG components
 const HomeIcon = () => (
@@ -35,8 +37,16 @@ const InfoIcon = () => (
   </svg>
 )
 
-const ProfileIcon = ({ initial }: { initial?: string }) => (
-  initial ? (
+const ProfileIcon = ({ initial, pfpUrl }: { initial?: string; pfpUrl?: string }) => (
+  pfpUrl ? (
+    <Image
+      src={pfpUrl}
+      alt="Profile"
+      width={24}
+      height={24}
+      className="w-6 h-6 rounded-full object-cover"
+    />
+  ) : initial ? (
     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] flex items-center justify-center text-xs font-bold">
       {initial}
     </div>
@@ -58,9 +68,11 @@ const navItems = [
 export function Header() {
   const pathname = usePathname()
   const { timeRemaining, formatTime, isActive } = useArcadeTimer()
+  const { user: farcasterUser } = useFarcaster()
 
-  // Mock: In real app, get from wallet connection
-  const walletInitial: string | undefined = undefined
+  // Get profile info from Farcaster context
+  const walletInitial: string | undefined = farcasterUser?.username?.[0]?.toUpperCase()
+  const pfpUrl: string | undefined = farcasterUser?.pfpUrl
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#09090b]/95 backdrop-blur border-t border-[#27272a] safe-area-bottom">
@@ -91,7 +103,7 @@ export function Header() {
               }`}
             >
               {item.href === '/profile' ? (
-                <ProfileIcon initial={walletInitial} />
+                <ProfileIcon initial={walletInitial} pfpUrl={pfpUrl} />
               ) : (
                 <Icon />
               )}

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useLeaderboards } from '@/hooks/useApi'
+import { useState } from 'react'
+import { useLeaderboards, useStats, usePlayerRanks, usePlayer } from '@/hooks/useApi'
 
 type LeaderboardType = 'lost' | 'staking' | 'time'
 
@@ -35,26 +35,10 @@ const formatTimeSeconds = (seconds: number) => {
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('lost')
-  const [totalDonated, setTotalDonated] = useState<number>(0)
   const { yeet, staking, time, isLoading } = useLeaderboards(20)
-
-  // Fetch total donated from backend
-  useEffect(() => {
-    const fetchTotalDonated = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
-        const res = await fetch(`${apiUrl}/api/v1/stats/total-donated`)
-        if (res.ok) {
-          const json = await res.json()
-          setTotalDonated(json.data?.totalDonated || 0)
-        }
-      } catch (err) {
-        // Silently fail - will show 0
-        console.log('Could not fetch total donated:', err)
-      }
-    }
-    fetchTotalDonated()
-  }, [])
+  const { data: stats } = useStats()
+  const { data: playerRanks } = usePlayerRanks()
+  const { data: playerData } = usePlayer()
 
   const leaderboardData: Record<LeaderboardType, LeaderboardEntry[]> = {
     lost: yeet.map(e => ({
@@ -100,6 +84,30 @@ export default function LeaderboardPage() {
     }
   }
 
+  const getUserRank = (): number | null => {
+    if (!playerRanks) return null
+    switch (activeTab) {
+      case 'lost':
+        return playerRanks.yeetRank
+      case 'staking':
+        return playerRanks.stakingRank
+      case 'time':
+        return playerRanks.timePlayedRank
+    }
+  }
+
+  const getUserScore = (): string => {
+    if (!playerData) return '--'
+    switch (activeTab) {
+      case 'lost':
+        return `${playerData.stats?.totalYeeted || '0'}Q`
+      case 'staking':
+        return formatBlocAmount(playerData.cachedStakedBalance || '0')
+      case 'time':
+        return formatTimeSeconds(Number(playerData.stats?.totalTimeConsumed || 0))
+    }
+  }
+
   return (
     <div className="min-h-screen px-4 py-8">
       <div className="max-w-lg mx-auto">
@@ -112,7 +120,7 @@ export default function LeaderboardPage() {
         {/* Total Donated Stat */}
         <div className="stat-card mb-6 text-center">
           <div className="stat-label">Total Donated</div>
-          <div className="stat-value text-2xl text-gradient">{totalDonated.toLocaleString()}</div>
+          <div className="stat-value text-2xl text-gradient">{(stats?.totalDonated || 0).toLocaleString()}</div>
           <div className="text-xs text-muted">quarters to the pool</div>
         </div>
 
@@ -178,11 +186,13 @@ export default function LeaderboardPage() {
           <div className="flex justify-between items-center">
             <div>
               <div className="text-xs text-muted">Your Rank</div>
-              <div className="text-xl font-bold">--</div>
+              <div className="text-xl font-bold">
+                {getUserRank() ? `#${getUserRank()}` : '--'}
+              </div>
             </div>
             <div className="text-right">
               <div className="text-xs text-muted">Your Score</div>
-              <div className="text-xl font-bold text-gradient">--</div>
+              <div className="text-xl font-bold text-gradient">{getUserScore()}</div>
             </div>
           </div>
         </div>

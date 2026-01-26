@@ -146,3 +146,27 @@ export async function submitGameScore(
     body: JSON.stringify({ score }),
   })
 }
+
+// Player Ranks
+export interface PlayerRanks {
+  walletAddress: string
+  yeetRank: number | null
+  stakingRank: number | null
+  timePlayedRank: number | null
+}
+
+export async function getPlayerRanks(walletAddress: string): Promise<PlayerRanks> {
+  return fetchApi<PlayerRanks>(`/players/${walletAddress}/ranks`)
+}
+
+// Stats
+export interface Stats {
+  totalPlayers: number
+  totalDonated: number
+  totalStaked: number
+  totalTimePlayed: number
+}
+
+export async function getStats(): Promise<Stats> {
+  return fetchApi<Stats>('/stats')
+}

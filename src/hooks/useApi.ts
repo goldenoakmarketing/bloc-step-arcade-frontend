@@ -12,9 +12,13 @@ import {
   getYeetLeaderboard,
   getStakingLeaderboard,
   getTimePlayedLeaderboard,
+  getPlayerRanks,
+  getStats,
   type Player,
   type GameSession,
   type LeaderboardEntry,
+  type PlayerRanks,
+  type Stats,
 } from '@/lib/api'
 
 // Player hooks
@@ -131,4 +135,25 @@ export function useLeaderboards(limit = 10) {
     isLoading: yeet.isLoading || staking.isLoading || time.isLoading,
     error: yeet.error || staking.error || time.error,
   }
+}
+
+// Player ranks hook
+export function usePlayerRanks() {
+  const { address } = useAccount()
+
+  return useQuery({
+    queryKey: ['playerRanks', address],
+    queryFn: () => getPlayerRanks(address!),
+    enabled: !!address,
+    staleTime: 60_000, // 1 minute
+  })
+}
+
+// Stats hook
+export function useStats() {
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: () => getStats(),
+    staleTime: 60_000, // 1 minute
+  })
 }
