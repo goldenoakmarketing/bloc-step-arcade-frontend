@@ -107,11 +107,8 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
   const [copied, setCopied] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
 
+  // Only use the public frontend URL for sharing - no backend URLs
   const appUrl = 'https://blocsteparcade.netlify.app'
-  const leaderboardUrl = `${appUrl}/leaderboard`
-  // Dynamic game-specific leaderboard image for rich embeds
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
-  const leaderboardImageUrl = `${apiUrl}/api/v1/leaderboards/image/${gameId}`
 
   // Build share text with game-specific emoji
   const getShareText = () => {
@@ -130,16 +127,15 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
     try {
       if (isInFarcaster) {
         // Use Farcaster Mini App SDK to open native cast composer
-        // Embed both the leaderboard image and the app URL
+        // Only embed the app URL - no backend image URLs
         await sdk.actions.composeCast({
           text: getShareText(),
-          embeds: [leaderboardImageUrl, leaderboardUrl],
+          embeds: [appUrl],
         })
       } else {
         // Fall back to opening Warpcast compose URL in browser
-        // Use image URL for richer preview
         const text = encodeURIComponent(getShareText())
-        const embed = encodeURIComponent(leaderboardImageUrl)
+        const embed = encodeURIComponent(appUrl)
         const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
         window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
       }
@@ -148,7 +144,7 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
       console.error('Failed to share:', error)
       // Fall back to URL approach if SDK fails
       const text = encodeURIComponent(getShareText())
-      const embed = encodeURIComponent(leaderboardUrl)
+      const embed = encodeURIComponent(appUrl)
       const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
       window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
     } finally {
@@ -158,7 +154,7 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
 
   // Copy to clipboard fallback
   const handleCopyToClipboard = async () => {
-    const text = `${getShareText()}\n\n${leaderboardUrl}`
+    const text = `${getShareText()}\n\n${appUrl}`
     await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
