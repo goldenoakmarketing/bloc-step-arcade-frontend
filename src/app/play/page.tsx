@@ -1,67 +1,22 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { GAMES, GameWrapper, getGameById } from '@/components/games'
 import { useQuarters } from '@/hooks/useQuarters'
 
 export default function PlayPage() {
   const [selectedGame, setSelectedGame] = useState<string | null>(null)
   const [timeRemaining, setTimeRemaining] = useState(0) // Local time for gameplay
-  const [pendingGameStart, setPendingGameStart] = useState(false) // Auto-start after tx confirms
+  const [quartersUsed, setQuartersUsed] = useState(0) // Track quarters used this session
 
   const {
     isConnected,
-    quarterBalance, // How many quarters user can buy (from BLOC balance)
-    isApprovePending,
-    isApproveConfirming,
-    isApproveSuccess,
-    isBuyPending,
-    isBuyConfirming,
-    isBuySuccess,
-    handleApprove,
-    handleBuyQuarters,
-    needsApproval,
-    hasSufficientBalance,
-    refetchAll,
-    resetApprove,
-    resetBuy,
+    quarterBalance, // How many quarters user can afford (from BLOC balance)
     QUARTER_DURATION,
   } = useQuarters()
 
-  const [isInserting, setIsInserting] = useState(false)
-
-  // Refs to prevent re-triggering (one-shot flags)
-  const buyTriggeredRef = useRef(false)
-  const completedRef = useRef(false)
-
-  // After successful buy, add time and reset states
-  useEffect(() => {
-    if (isBuySuccess && isInserting && !completedRef.current) {
-      completedRef.current = true // Prevent re-entry
-      setTimeRemaining(prev => prev + QUARTER_DURATION) // Add 15 minutes
-      refetchAll()
-      // Reset after a short delay to ensure state is stable
-      setTimeout(() => {
-        resetBuy()
-        resetApprove()
-        setIsInserting(false)
-        buyTriggeredRef.current = false
-        completedRef.current = false
-      }, 100)
-    }
-  }, [isBuySuccess, isInserting, refetchAll, resetBuy, resetApprove, QUARTER_DURATION])
-
-  // After approval succeeds, refetch allowance then buy quarter (once only)
-  useEffect(() => {
-    if (isApproveSuccess && isInserting && !isBuyPending && !isBuyConfirming && !buyTriggeredRef.current) {
-      buyTriggeredRef.current = true // Prevent re-triggering
-      // Refetch to ensure allowance is updated, then buy after a short delay
-      refetchAll()
-      setTimeout(() => {
-        handleBuyQuarters(1)
-      }, 500) // Give time for blockchain state to propagate
-    }
-  }, [isApproveSuccess, isInserting, isBuyPending, isBuyConfirming, handleBuyQuarters, refetchAll])
+  // Available quarters = what they can afford minus what they've used this session
+  const availableQuarters = Math.max(0, quarterBalance - quartersUsed)
 
   const formatQuarters = (quarters: number) => {
     return `${quarters}Q`
@@ -73,41 +28,21 @@ export default function PlayPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Compute insert quarter status for UI
-  const getInsertStatus = (): 'idle' | 'approving' | 'confirming-approve' | 'buying' | 'confirming-buy' => {
-    if (isApprovePending) return 'approving'
-    if (isApproveConfirming) return 'confirming-approve'
-    if (isBuyPending) return 'buying'
-    if (isBuyConfirming) return 'confirming-buy'
-    return 'idle'
-  }
-
-  // Insert quarter - triggers blockchain flow
-  // Returns 'started' if tx flow begins, 'has-time' if already has time, 'failed' otherwise
+  // Insert quarter - just track locally, no contract call
+  // Returns 'started' if quarter inserted, 'has-time' if already has time, 'failed' otherwise
   const handleBuyTime = useCallback((): 'started' | 'has-time' | 'failed' => {
-    // If already has time, don't need to buy
+    // If already has time, don't need to insert another quarter
     if (timeRemaining > 0) return 'has-time'
 
     if (!isConnected) return 'failed'
-    if (!hasSufficientBalance(1)) return 'failed'
-    if (isInserting) return 'failed' // Already in progress
+    if (availableQuarters < 1) return 'failed'
 
-    // Reset refs for new flow
-    buyTriggeredRef.current = false
-    completedRef.current = false
+    // Insert quarter locally - add time and track usage
+    setQuartersUsed(prev => prev + 1)
+    setTimeRemaining(prev => prev + QUARTER_DURATION)
 
-    setIsInserting(true)
-    setPendingGameStart(true) // Will auto-start game after tx confirms
-
-    if (needsApproval(1)) {
-      handleApprove(1)
-    } else {
-      buyTriggeredRef.current = true // Mark as triggered since we're calling buy directly
-      handleBuyQuarters(1)
-    }
-
-    return 'started' // Transaction flow started, game will start after confirmation
-  }, [isConnected, hasSufficientBalance, needsApproval, handleApprove, handleBuyQuarters, isInserting, timeRemaining])
+    return 'started'
+  }, [isConnected, availableQuarters, timeRemaining, QUARTER_DURATION])
 
   // Update time remaining (called by GameWrapper)
   const handleTimeChange = useCallback((newTime: number) => {
@@ -130,14 +65,10 @@ export default function PlayPage() {
         gameName={game.meta.name}
         gameIcon={game.meta.icon}
         onExit={() => setSelectedGame(null)}
-        quarterBalance={quarterBalance}
+        quarterBalance={availableQuarters}
         timeRemaining={timeRemaining}
         onTimeChange={handleTimeChange}
         onBuyTime={handleBuyTime}
-        isInsertingQuarter={isInserting}
-        insertQuarterStatus={getInsertStatus()}
-        pendingGameStart={pendingGameStart}
-        onGameStarted={() => setPendingGameStart(false)}
       >
         {(props) => <GameComponent {...props} />}
       </GameWrapper>
@@ -154,7 +85,7 @@ export default function PlayPage() {
           <p className="text-muted text-sm">Choose a game to play</p>
           {isConnected ? (
             <div className="mt-4 flex justify-center gap-3">
-              <span className="badge">{formatQuarters(quarterBalance)} available</span>
+              <span className="badge">{formatQuarters(availableQuarters)} available</span>
               {timeRemaining > 0 && (
                 <span className="badge badge-success">{formatTime(timeRemaining)} remaining</span>
               )}
