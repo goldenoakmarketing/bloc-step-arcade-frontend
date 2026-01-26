@@ -103,7 +103,10 @@ export default function LeaderboardPage() {
       case 'lost':
         return `${playerData.stats?.totalYeeted || '0'}Q`
       case 'staking':
-        return formatBlocAmount(playerData.cachedStakedBalance || '0')
+        // Convert wei to tokens (divide by 1e18) to match leaderboard display
+        const stakingWei = BigInt(playerData.cachedStakedBalance || '0')
+        const stakingTokens = stakingWei / BigInt(10 ** 18)
+        return formatBlocAmount(stakingTokens.toString())
       case 'time':
         return formatTimeSeconds(Number(playerData.stats?.totalTimeConsumed || 0))
     }
