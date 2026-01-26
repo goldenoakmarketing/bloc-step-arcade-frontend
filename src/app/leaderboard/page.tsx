@@ -45,8 +45,8 @@ export default function LeaderboardPage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
         const res = await fetch(`${apiUrl}/api/v1/stats/total-donated`)
         if (res.ok) {
-          const data = await res.json()
-          setTotalDonated(data.totalDonated || 0)
+          const json = await res.json()
+          setTotalDonated(json.data?.totalDonated || 0)
         }
       } catch (err) {
         // Silently fail - will show 0
