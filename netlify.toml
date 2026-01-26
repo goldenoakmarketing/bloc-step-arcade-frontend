@@ -9,6 +9,12 @@
   package = "@netlify/plugin-nextjs"
 
 [[headers]]
+  for = "/.well-known/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    CDN-Cache-Control = "no-store"
+
+[[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
