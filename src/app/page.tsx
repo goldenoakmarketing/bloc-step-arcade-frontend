@@ -311,7 +311,7 @@ export default function HomePage() {
             <div className="card h-full bg-zinc-900/80 border border-zinc-800 hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all">
               <div className="text-3xl mb-2">🎮</div>
               <div className="font-bold text-white mb-1">PLAY</div>
-              <p className="text-xs text-zinc-500">Simple & fun games. 1 quarter = 15 min of fun.</p>
+              <p className="text-xs text-zinc-500">1 quarter (250 BLOC) = 15 min of arcade time.</p>
             </div>
           </Link>
 

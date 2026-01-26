@@ -323,6 +323,7 @@ export default function ProfilePage() {
           <div className="text-center mb-6">
             <div className="text-sm text-muted mb-1">Quarter Balance</div>
             <div className="text-4xl font-bold text-gradient">{formatQuarters(quarterBalance)}</div>
+            <div className="text-xs text-purple-400 mt-1">1Q = 250 BLOC = 15 min</div>
             <div className="text-sm text-muted mt-1">{formattedTimeBalance} playtime available</div>
             {isConnected && (
               <div className="text-xs text-zinc-500 mt-2 space-y-0.5">
@@ -337,13 +338,18 @@ export default function ProfilePage() {
 
             {/* Quick select buttons */}
             <div className="flex gap-2 mb-3">
-              {[4, 20, 40].map((amount) => (
+              {[
+                { quarters: 4, blocLabel: '1K' },
+                { quarters: 20, blocLabel: '5K' },
+                { quarters: 40, blocLabel: '10K' },
+              ].map(({ quarters, blocLabel }) => (
                 <button
-                  key={amount}
-                  onClick={() => handleQuickSelect(amount)}
-                  className={purchaseAmount === amount && !customAmount ? 'tab tab-active flex-1' : 'tab flex-1'}
+                  key={quarters}
+                  onClick={() => handleQuickSelect(quarters)}
+                  className={purchaseAmount === quarters && !customAmount ? 'tab tab-active flex-1' : 'tab flex-1'}
                 >
-                  {amount}Q
+                  <div>{quarters}Q</div>
+                  <div className="text-xs text-muted">{blocLabel} BLOC</div>
                 </button>
               ))}
             </div>

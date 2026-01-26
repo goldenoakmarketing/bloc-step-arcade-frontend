@@ -12,22 +12,56 @@ export default function InfoPage() {
           <p className="text-muted text-sm">Building a real-world economy, one quarter at a time</p>
         </div>
 
+        {/* Token Economics */}
+        <div className="card mb-4 border-purple-500/30 bg-purple-950/20">
+          <h2 className="font-bold mb-3 flex items-center gap-2">
+            <span>🪙</span> Token Economics
+          </h2>
+          <div className="bg-zinc-900/50 rounded-lg p-4 mb-3">
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-gradient">1Q</div>
+                <div className="text-xs text-muted">= 250 BLOC</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gradient">$1</div>
+                <div className="text-xs text-muted">= 1,000 BLOC (4Q)</div>
+              </div>
+            </div>
+          </div>
+          <ul className="text-sm text-muted space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="text-purple-400">•</span>
+              <span><span className="text-white">1 Quarter = 250 BLOC</span> tokens</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-purple-400">•</span>
+              <span><span className="text-white">1 Dollar = 1,000 BLOC</span> (4 quarters)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-purple-400">•</span>
+              <span><span className="text-white">1 Quarter = 15 minutes</span> of gameplay</span>
+            </li>
+          </ul>
+        </div>
+
         {/* The Quarter */}
         <div className="card mb-4">
           <h2 className="font-bold mb-3 flex items-center gap-2">
             <span>🎮</span> The Quarter
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
-            1 Quarter = 15 minutes of playtime. That's it. Simple arcade economics.
+            Just like a real arcade — insert a quarter, play games. The difference?
+            Your quarters are <span className="text-white">250 BLOC tokens</span> each.
           </p>
           <ul className="text-sm text-muted space-y-2">
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">•</span>
-              <span>Buy quarters to play games</span>
+              <span>Buy quarters (250 BLOC each) to play games</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">•</span>
-              <span>Insert a quarter, clock starts ticking</span>
+              <span>Insert a quarter, get 15 minutes on the clock</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-emerald-400">•</span>
