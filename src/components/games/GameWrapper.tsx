@@ -40,7 +40,7 @@ const GAME_EMOJIS: Record<string, string> = {
 // Submit score to backend
 async function submitScore(walletAddress: string, gameId: string, score: number): Promise<{ rank: number | null }> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
     const res = await fetch(`${apiUrl}/api/v1/leaderboards/game/${gameId}/score`, {
       method: 'POST',
       headers: {
@@ -63,7 +63,7 @@ async function submitScore(walletAddress: string, gameId: string, score: number)
 // Fetch game leaderboard from backend
 async function fetchGameLeaderboard(gameId: string, limit = 5): Promise<LeaderboardEntry[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend.onrender.com'
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
     const res = await fetch(`${apiUrl}/api/v1/leaderboards/game/${gameId}?limit=${limit}`)
     const json = await res.json()
     if (json.success && json.data) {
