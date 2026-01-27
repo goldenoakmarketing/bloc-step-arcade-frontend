@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "1",
+    "name": "Bloc Step Arcade",
+    "iconUrl": "https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg",
+    "homeUrl": "https://blocsteparcade.netlify.app",
+    "imageUrl": "https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg",
+    "splashImageUrl": "https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg",
+    "splashBackgroundColor": "#09090b",
+    "webhookUrl": ""
+  }
+}
