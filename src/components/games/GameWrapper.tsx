@@ -48,28 +48,51 @@ async function submitScore(
   farcasterFid?: number,
   farcasterPfp?: string
 ): Promise<{ rank: number | null }> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
+  const url = `${apiUrl}/api/v1/leaderboards/game/${gameId}/score`
+
+  console.log('[submitScore] Starting score submission:', {
+    walletAddress,
+    gameId,
+    score,
+    farcasterUsername,
+    farcasterFid,
+    url,
+  })
+
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
-    const res = await fetch(`${apiUrl}/api/v1/leaderboards/game/${gameId}/score`, {
+    const body = JSON.stringify({
+      score,
+      farcasterUsername,
+      farcasterFid,
+      farcasterPfp,
+    })
+
+    console.log('[submitScore] Request body:', body)
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Wallet-Address': walletAddress,
       },
-      body: JSON.stringify({
-        score,
-        farcasterUsername,
-        farcasterFid,
-        farcasterPfp,
-      }),
+      body,
     })
+
+    console.log('[submitScore] Response status:', res.status)
+
     const json = await res.json()
+    console.log('[submitScore] Response JSON:', json)
+
     if (json.success) {
+      console.log('[submitScore] Success! Rank:', json.data.rank)
       return { rank: json.data.rank }
     }
+
+    console.error('[submitScore] API returned success=false:', json.error || json.message)
     return { rank: null }
   } catch (error) {
-    console.error('Failed to submit score:', error)
+    console.error('[submitScore] Exception during score submission:', error)
     return { rank: null }
   }
 }
@@ -369,10 +392,13 @@ export function GameWrapper({
   }, [])
 
   const handleGameOver = useCallback(async () => {
+    console.log('[handleGameOver] Game over triggered:', { gameId, score, address, highScore })
+
     const newHighScore = score > highScore
     if (newHighScore) {
       setHighScore(score)
       localStorage.setItem(`highscore_${gameId}`, score.toString())
+      console.log('[handleGameOver] New high score saved:', score)
     }
     setIsNewHighScore(newHighScore)
 
@@ -381,16 +407,19 @@ export function GameWrapper({
     // Report elapsed play time to backend for time-played leaderboard
     if (address && playStartTimeRef.current > 0) {
       const elapsedSeconds = Math.floor((Date.now() - playStartTimeRef.current) / 1000)
+      console.log('[handleGameOver] Reporting time consumed:', elapsedSeconds)
       if (elapsedSeconds > 0) {
         reportTimeConsumed(address, elapsedSeconds).catch((err) => {
-          console.error('Failed to report time consumed:', err)
+          console.error('[handleGameOver] Failed to report time consumed:', err)
         })
       }
       playStartTimeRef.current = 0
     }
 
     // Submit score to backend and get rank
+    console.log('[handleGameOver] Checking if should submit score:', { address, score, willSubmit: !!(address && score > 0) })
     if (address && score > 0) {
+      console.log('[handleGameOver] Submitting score to backend...')
       const { rank } = await submitScore(
         address,
         gameId,
@@ -399,11 +428,16 @@ export function GameWrapper({
         farcasterUser?.fid,
         farcasterUser?.pfpUrl
       )
+      console.log('[handleGameOver] Score submitted, rank received:', rank)
       setPlayerRank(rank || 0)
+    } else {
+      console.log('[handleGameOver] Skipping score submission - no address or score is 0')
     }
 
     // Fetch game leaderboard from backend
+    console.log('[handleGameOver] Fetching game leaderboard...')
     const entries = await fetchGameLeaderboard(gameId, 5)
+    console.log('[handleGameOver] Leaderboard fetched:', entries.length, 'entries')
     // Mark current player in leaderboard
     if (address) {
       const addressLower = address.toLowerCase()
