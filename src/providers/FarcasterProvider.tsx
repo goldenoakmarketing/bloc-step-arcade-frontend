@@ -142,7 +142,7 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
         // Prompt user to add the mini app (which also enables notifications)
         const result = await sdk.actions.addFrame()
 
-        if (result.added && result.notificationDetails) {
+        if (result.type === 'added' && result.notificationDetails) {
           setHasAddedApp(true)
           setNotificationsEnabled(true)
 
@@ -154,7 +154,7 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
             result.notificationDetails.token
           )
           console.log('Notification token registered with backend')
-        } else if (result.added) {
+        } else if (result.type === 'added') {
           setHasAddedApp(true)
           console.log('App added but notifications not enabled')
         }
@@ -178,7 +178,7 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
     try {
       const result = await sdk.actions.addFrame()
 
-      if (result.added) {
+      if (result.type === 'added') {
         setHasAddedApp(true)
 
         if (result.notificationDetails) {
