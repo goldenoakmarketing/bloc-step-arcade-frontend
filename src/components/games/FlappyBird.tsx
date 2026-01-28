@@ -32,6 +32,7 @@ export function FlappyBird({ onScore, onGameOver, isPaused }: GameProps) {
   const [birdRotation, setBirdRotation] = useState(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const nextPipeId = useRef(0)
+  const gameOverCalledRef = useRef(false)
 
   const CANVAS_WIDTH = 320
   const CANVAS_HEIGHT = 480
@@ -79,7 +80,10 @@ export function FlappyBird({ onScore, onGameOver, isPaused }: GameProps) {
 
         // Hit ground or ceiling
         if (newY > CANVAS_HEIGHT - BIRD_SIZE || newY < 0) {
-          onGameOver()
+          if (!gameOverCalledRef.current) {
+            gameOverCalledRef.current = true
+            onGameOver()
+          }
           return y
         }
 
@@ -114,7 +118,10 @@ export function FlappyBird({ onScore, onGameOver, isPaused }: GameProps) {
           // Check collision
           if (birdRight > pipeLeft && birdLeft < pipeRight) {
             if (birdTop < pipe.topHeight || birdBottom > pipe.topHeight + PIPE_GAP) {
-              onGameOver()
+              if (!gameOverCalledRef.current) {
+                gameOverCalledRef.current = true
+                onGameOver()
+              }
             }
           }
         })
@@ -224,7 +231,9 @@ export function FlappyBird({ onScore, onGameOver, isPaused }: GameProps) {
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         onClick={jump}
-        className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer"
+        onTouchStart={(e) => { e.preventDefault(); jump() }}
+        className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer select-none"
+        style={{ touchAction: 'none' }}
       />
 
       <p className="text-muted text-sm mt-4">

@@ -28,6 +28,7 @@ export function Snake({ onScore, onGameOver, isPaused }: GameProps) {
   const [gameStarted, setGameStarted] = useState(false)
   const directionRef = useRef(direction)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const gameOverCalledRef = useRef(false)
 
   const CANVAS_SIZE = GRID_SIZE * CELL_SIZE
 
@@ -62,13 +63,19 @@ export function Snake({ onScore, onGameOver, isPaused }: GameProps) {
 
         // Check wall collision
         if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
-          onGameOver()
+          if (!gameOverCalledRef.current) {
+            gameOverCalledRef.current = true
+            onGameOver()
+          }
           return currentSnake
         }
 
         // Check self collision
         if (currentSnake.some(seg => seg.x === head.x && seg.y === head.y)) {
-          onGameOver()
+          if (!gameOverCalledRef.current) {
+            gameOverCalledRef.current = true
+            onGameOver()
+          }
           return currentSnake
         }
 
@@ -238,7 +245,8 @@ export function Snake({ onScore, onGameOver, isPaused }: GameProps) {
         height={CANVAS_SIZE}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="mx-auto rounded-lg border-2 border-zinc-700"
+        className="mx-auto rounded-lg border-2 border-zinc-700 select-none"
+        style={{ touchAction: 'none' }}
       />
 
       {/* Mobile controls */}

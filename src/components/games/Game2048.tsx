@@ -6,7 +6,7 @@
  * https://github.com/gabrielecirulli/2048
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { GameProps } from './GameWrapper'
 
 type Grid = (number | null)[][]
@@ -126,6 +126,7 @@ export function Game2048({ onScore, onGameOver, isPaused }: GameProps) {
     return g
   })
   const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null)
+  const gameOverCalledRef = useRef(false)
 
   const handleMove = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
     if (isPaused) return
@@ -140,7 +141,10 @@ export function Game2048({ onScore, onGameOver, isPaused }: GameProps) {
       const withNewTile = addRandomTile(newGrid)
 
       if (!canMove(withNewTile)) {
-        setTimeout(() => onGameOver(), 500)
+        if (!gameOverCalledRef.current) {
+          gameOverCalledRef.current = true
+          setTimeout(() => onGameOver(), 500)
+        }
       }
 
       return withNewTile
@@ -192,6 +196,7 @@ export function Game2048({ onScore, onGameOver, isPaused }: GameProps) {
         className="bg-amber-900/30 rounded-lg p-2 inline-block"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'none' }}
       >
         <div className="grid grid-cols-4 gap-2">
           {grid.flat().map((value, i) => (

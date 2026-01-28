@@ -49,6 +49,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
   const [waitingLaunch, setWaitingLaunch] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const keysRef = useRef<Set<string>>(new Set())
+  const gameOverCalledRef = useRef(false)
 
   const gameRef = useRef({
     paddleX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
@@ -228,7 +229,10 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
         setBricksLeft(remaining)
 
         if (remaining === 0) {
-          onGameOver()
+          if (!gameOverCalledRef.current) {
+            gameOverCalledRef.current = true
+            onGameOver()
+          }
           return
         }
       }
@@ -238,7 +242,10 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
         setLives(prev => {
           const newLives = prev - 1
           if (newLives <= 0) {
-            onGameOver()
+            if (!gameOverCalledRef.current) {
+              gameOverCalledRef.current = true
+              onGameOver()
+            }
           } else {
             resetBall()
           }
@@ -371,6 +378,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
         onTouchStart={handleTouch}
         onTouchMove={handleMove}
         className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer select-none"
+        style={{ touchAction: 'none' }}
       />
 
       {/* Mobile controls */}

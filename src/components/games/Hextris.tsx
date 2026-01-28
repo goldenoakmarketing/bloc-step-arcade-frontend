@@ -37,6 +37,7 @@ export function Hextris({ onScore, onGameOver, isPaused }: GameProps) {
   const [speed, setSpeed] = useState(1.4)
   const nextBlockId = useRef(0)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const gameOverCalledRef = useRef(false)
 
   // Spawn new falling blocks
   useEffect(() => {
@@ -135,7 +136,10 @@ export function Hextris({ onScore, onGameOver, isPaused }: GameProps) {
             ))
 
             if (maxOnAnySide >= MAX_BLOCKS) {
-              onGameOver()
+              if (!gameOverCalledRef.current) {
+                gameOverCalledRef.current = true
+                onGameOver()
+              }
             }
 
             return updated
@@ -255,6 +259,7 @@ export function Hextris({ onScore, onGameOver, isPaused }: GameProps) {
         width={300}
         height={300}
         className="mx-auto bg-zinc-900 rounded-lg border border-zinc-700"
+        style={{ touchAction: 'none' }}
       />
 
       {/* Touch controls */}

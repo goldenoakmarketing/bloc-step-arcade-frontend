@@ -6,7 +6,7 @@
  * Implementation created for Bloc Step Arcade
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { GameProps } from './GameWrapper'
 
 const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'] as const
@@ -87,6 +87,7 @@ export function Solitaire({ onScore, onGameOver, isPaused }: GameProps) {
   const [game, setGame] = useState<GameState>(() => initGame())
   const [selected, setSelected] = useState<{ pile: string; index: number } | null>(null)
   const [moves, setMoves] = useState(0)
+  const gameOverCalledRef = useRef(false)
 
   function initGame(): GameState {
     const deck = shuffle(createDeck())
@@ -123,7 +124,10 @@ export function Solitaire({ onScore, onGameOver, isPaused }: GameProps) {
     const totalInFoundations = game.foundations.reduce((sum, f) => sum + f.length, 0)
     if (totalInFoundations === 52) {
       onScore(1000 - moves)
-      setTimeout(() => onGameOver(), 1500)
+      if (!gameOverCalledRef.current) {
+        gameOverCalledRef.current = true
+        setTimeout(() => onGameOver(), 1500)
+      }
     }
   }, [game.foundations, moves, onScore, onGameOver])
 

@@ -251,6 +251,7 @@ export function AngryBlocs({ onScore, onGameOver, isPaused }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<number>(0)
   const settleCounterRef = useRef(0)
+  const gameOverCalledRef = useRef(false)
 
   const resetLevel = useCallback((levelNum: number) => {
     setBlocks(generateLevel(levelNum))
@@ -479,7 +480,10 @@ export function AngryBlocs({ onScore, onGameOver, isPaused }: GameProps) {
             setTimeout(nextLevel, 1500)
           } else if (shotsLeft <= 0) {
             setGamePhase('gameOver')
-            setTimeout(onGameOver, 1500)
+            if (!gameOverCalledRef.current) {
+              gameOverCalledRef.current = true
+              setTimeout(onGameOver, 1500)
+            }
           } else {
             setProjectile(null)
             setGamePhase('aiming')

@@ -47,6 +47,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
   const [gameWon, setGameWon] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const keysRef = useRef<Set<string>>(new Set())
+  const gameOverCalledRef = useRef(false)
 
   const gameRef = useRef({
     playerX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
@@ -248,7 +249,10 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
           if (newScore >= WIN_SCORE) {
             setGameWon(true)
             onScore(100) // Bonus for winning
-            onGameOver() // Trigger score submission + share card
+            if (!gameOverCalledRef.current) {
+              gameOverCalledRef.current = true
+              onGameOver()
+            }
           } else {
             onScore(10 * playerScored)
           }
@@ -260,7 +264,10 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
         setCpuScore(s => {
           const newScore = s + cpuScored
           if (newScore >= WIN_SCORE) {
-            onGameOver()
+            if (!gameOverCalledRef.current) {
+              gameOverCalledRef.current = true
+              onGameOver()
+            }
           }
           return newScore
         })
@@ -391,6 +398,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
         onTouchStart={handleTouch}
         onTouchMove={handleTouch}
         className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer select-none"
+        style={{ touchAction: 'none' }}
       />
 
       {/* Mobile controls */}

@@ -121,6 +121,7 @@ export function DrBloc({ onScore, onGameOver, isPaused }: GameProps) {
   const [lines, setLines] = useState(0)
   const [dropInterval, setDropInterval] = useState(INITIAL_DROP_INTERVAL)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const gameOverCalledRef = useRef(false)
 
   const startGame = useCallback(() => {
     if (!gameStarted) {
@@ -192,7 +193,10 @@ export function DrBloc({ onScore, onGameOver, isPaused }: GameProps) {
 
     // Check game over
     if (!isValidPosition(clearedBoard, nextPiece)) {
-      onGameOver()
+      if (!gameOverCalledRef.current) {
+        gameOverCalledRef.current = true
+        onGameOver()
+      }
       return
     }
 
@@ -382,7 +386,8 @@ export function DrBloc({ onScore, onGameOver, isPaused }: GameProps) {
         width={BOARD_WIDTH * CELL_SIZE + 80}
         height={BOARD_HEIGHT * CELL_SIZE}
         onClick={startGame}
-        className="mx-auto rounded-lg border-2 border-zinc-700"
+        className="mx-auto rounded-lg border-2 border-zinc-700 select-none"
+        style={{ touchAction: 'none' }}
       />
 
       {/* Touch controls */}

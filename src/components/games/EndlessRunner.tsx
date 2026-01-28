@@ -37,6 +37,7 @@ export function EndlessRunner({ onScore, onGameOver, isPaused }: GameProps) {
   const [gameStarted, setGameStarted] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const nextObstacleId = useRef(0)
+  const gameOverCalledRef = useRef(false)
   const groundY = CANVAS_HEIGHT - GROUND_HEIGHT
 
   const playerHeight = isDucking ? PLAYER_HEIGHT / 2 : PLAYER_HEIGHT
@@ -143,14 +144,20 @@ export function EndlessRunner({ onScore, onGameOver, isPaused }: GameProps) {
           // Ground obstacle - check bottom collision
           const obsTop = groundY - obs.height
           if (playerBottom > obsTop) {
-            onGameOver()
+            if (!gameOverCalledRef.current) {
+              gameOverCalledRef.current = true
+              onGameOver()
+            }
             return
           }
         } else {
           // Flying obstacle - check if player is standing and not ducking
           const obsBottom = 100 + obs.height
           if (playerTopPos < obsBottom && !isDucking) {
-            onGameOver()
+            if (!gameOverCalledRef.current) {
+              gameOverCalledRef.current = true
+              onGameOver()
+            }
             return
           }
         }
@@ -311,6 +318,7 @@ export function EndlessRunner({ onScore, onGameOver, isPaused }: GameProps) {
         onMouseUp={() => duck(false)}
         onTouchEnd={() => duck(false)}
         className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer select-none"
+        style={{ touchAction: 'none' }}
       />
 
       <div className="flex justify-center gap-4 mt-4">
