@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
 import { useAccount } from 'wagmi'
-import { linkFarcaster } from '@/lib/api'
+import { linkFarcaster, registerNotificationToken } from '@/lib/api'
 
 interface FarcasterUser {
   fid: number
@@ -19,6 +19,8 @@ interface FarcasterContextType {
   clientFid: number | null
   hasAddedApp: boolean
   isLinked: boolean
+  notificationsEnabled: boolean
+  promptAddApp: () => Promise<boolean>
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
@@ -28,6 +30,8 @@ const FarcasterContext = createContext<FarcasterContextType>({
   clientFid: null,
   hasAddedApp: false,
   isLinked: false,
+  notificationsEnabled: false,
+  promptAddApp: async () => false,
 })
 
 export function useFarcaster() {
@@ -46,7 +50,9 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
   const [clientFid, setClientFid] = useState<number | null>(null)
   const [hasAddedApp, setHasAddedApp] = useState(false)
   const [isLinked, setIsLinked] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const linkAttemptedRef = useRef(false)
+  const notificationAttemptedRef = useRef(false)
   const { address } = useAccount()
 
   useEffect(() => {
@@ -76,6 +82,10 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
           if (context.client) {
             setClientFid(context.client.clientFid)
             setHasAddedApp(context.client.added)
+            // Check if notifications are already enabled
+            if (context.client.notificationDetails) {
+              setNotificationsEnabled(true)
+            }
           }
 
           // Call ready() to dismiss the splash screen
@@ -119,6 +129,76 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
     autoLink()
   }, [user, address])
 
+  // Auto-prompt to add app and enable notifications when user and wallet are ready
+  useEffect(() => {
+    const promptNotifications = async () => {
+      // Only attempt once per session, when in Farcaster context with user and wallet
+      if (notificationAttemptedRef.current || !isInFarcaster || !user || !address || hasAddedApp) {
+        return
+      }
+      notificationAttemptedRef.current = true
+
+      try {
+        // Prompt user to add the mini app (which also enables notifications)
+        const result = await sdk.actions.addFrame()
+
+        if (result.added && result.notificationDetails) {
+          setHasAddedApp(true)
+          setNotificationsEnabled(true)
+
+          // Register notification token with backend
+          await registerNotificationToken(
+            address,
+            user.fid,
+            result.notificationDetails.url,
+            result.notificationDetails.token
+          )
+          console.log('Notification token registered with backend')
+        } else if (result.added) {
+          setHasAddedApp(true)
+          console.log('App added but notifications not enabled')
+        }
+      } catch (error) {
+        // User declined or error occurred - that's OK
+        console.log('Add app prompt:', error)
+      }
+    }
+
+    // Delay the prompt slightly so it doesn't interfere with initial load
+    const timer = setTimeout(promptNotifications, 2000)
+    return () => clearTimeout(timer)
+  }, [isInFarcaster, user, address, hasAddedApp])
+
+  // Function to manually prompt user to add app
+  const promptAddApp = async (): Promise<boolean> => {
+    if (!isInFarcaster || !user || !address) {
+      return false
+    }
+
+    try {
+      const result = await sdk.actions.addFrame()
+
+      if (result.added) {
+        setHasAddedApp(true)
+
+        if (result.notificationDetails) {
+          setNotificationsEnabled(true)
+          await registerNotificationToken(
+            address,
+            user.fid,
+            result.notificationDetails.url,
+            result.notificationDetails.token
+          )
+        }
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Failed to add app:', error)
+      return false
+    }
+  }
+
   return (
     <FarcasterContext.Provider
       value={{
@@ -128,6 +208,8 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
         clientFid,
         hasAddedApp,
         isLinked,
+        notificationsEnabled,
+        promptAddApp,
       }}
     >
       {children}
@@ -154,6 +236,8 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           clientFid: null,
           hasAddedApp: false,
           isLinked: false,
+          notificationsEnabled: false,
+          promptAddApp: async () => false,
         }}
       >
         {children}

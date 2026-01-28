@@ -207,3 +207,21 @@ export interface Stats {
 export async function getStats(): Promise<Stats> {
   return fetchApi<Stats>('/stats')
 }
+
+// Notifications
+export async function registerNotificationToken(
+  walletAddress: string,
+  fid: number,
+  notificationUrl: string,
+  notificationToken: string
+): Promise<{ id: string; enabled: boolean }> {
+  return fetchApi('/notifications/register', {
+    method: 'POST',
+    headers: { 'X-Wallet-Address': walletAddress },
+    body: JSON.stringify({ fid, notificationUrl, notificationToken }),
+  })
+}
+
+export async function getNotificationStatus(walletAddress: string): Promise<{ enabled: boolean }> {
+  return fetchApi<{ enabled: boolean }>(`/notifications/status/${walletAddress}`)
+}
