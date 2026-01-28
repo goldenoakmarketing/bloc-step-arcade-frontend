@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
 import { useFarcaster } from '@/providers/FarcasterProvider'
 import { useAccount } from 'wagmi'
+import { reportTimeConsumed } from '@/lib/api'
 
 export interface GameProps {
   onScore: (points: number) => void
@@ -323,6 +324,7 @@ export function GameWrapper({
   const [playerRank, setPlayerRank] = useState<number>(0)
   const lastTapRef = useRef<number>(0)
   const doubleTapTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const playStartTimeRef = useRef<number>(0)
 
   // Load high score from localStorage
   useEffect(() => {
@@ -363,6 +365,17 @@ export function GameWrapper({
     setIsNewHighScore(newHighScore)
 
     setGameState('gameover')
+
+    // Report elapsed play time to backend for time-played leaderboard
+    if (address && playStartTimeRef.current > 0) {
+      const elapsedSeconds = Math.floor((Date.now() - playStartTimeRef.current) / 1000)
+      if (elapsedSeconds > 0) {
+        reportTimeConsumed(address, elapsedSeconds).catch((err) => {
+          console.error('Failed to report time consumed:', err)
+        })
+      }
+      playStartTimeRef.current = 0
+    }
 
     // Submit score to backend and get rank
     if (address && score > 0) {
@@ -415,6 +428,7 @@ export function GameWrapper({
     // Has time, start the game
     setScore(0)
     setIsNewHighScore(false)
+    playStartTimeRef.current = Date.now()
     setGameState('playing')
   }
 

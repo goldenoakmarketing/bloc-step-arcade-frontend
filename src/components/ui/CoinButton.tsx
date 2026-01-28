@@ -59,6 +59,27 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
     }
   }
 
+  // Auto-refetch when cooldown expires
+  useEffect(() => {
+    if (!claimInfo?.nextClaimTime || claimInfo.canClaim) return
+
+    const next = new Date(claimInfo.nextClaimTime).getTime()
+    const msUntilExpiry = next - Date.now()
+
+    if (msUntilExpiry <= 0) {
+      // Already expired, refetch immediately
+      fetchClaimInfo()
+      return
+    }
+
+    // Schedule refetch for when cooldown expires
+    const timer = setTimeout(() => {
+      fetchClaimInfo()
+    }, msUntilExpiry + 500) // +500ms buffer for server clock skew
+
+    return () => clearTimeout(timer)
+  }, [claimInfo?.nextClaimTime, claimInfo?.canClaim])
+
   const formatCooldown = (nextClaimTime: string) => {
     const next = new Date(nextClaimTime).getTime()
     const now = Date.now()
@@ -74,7 +95,9 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
     return `${minutes}m ${seconds}s`
   }
 
-  const isOnCooldown = claimInfo && !claimInfo.canClaim && claimInfo.nextClaimTime
+  // If nextClaimTime is in the past, treat as claimable regardless of stale canClaim value
+  const cooldownExpired = claimInfo?.nextClaimTime && new Date(claimInfo.nextClaimTime) <= new Date()
+  const isOnCooldown = claimInfo && !claimInfo.canClaim && claimInfo.nextClaimTime && !cooldownExpired
 
   const handleConnect = () => {
     const farcasterConnector = connectors.find(c => c.name.toLowerCase().includes('farcaster'))

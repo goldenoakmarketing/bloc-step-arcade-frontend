@@ -148,6 +148,18 @@ export async function submitGameScore(
   })
 }
 
+// Report time consumed (for time-played leaderboard)
+export async function reportTimeConsumed(
+  walletAddress: string,
+  seconds: number
+): Promise<void> {
+  await fetchApi(`/players/${walletAddress}/add-time`, {
+    method: 'POST',
+    headers: { 'X-Wallet-Address': walletAddress },
+    body: JSON.stringify({ seconds }),
+  })
+}
+
 // Player Ranks
 export interface PlayerRanks {
   walletAddress: string
