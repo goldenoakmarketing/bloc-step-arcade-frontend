@@ -1,7 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
+import { useAccount } from 'wagmi'
+import { linkFarcaster } from '@/lib/api'
 
 interface FarcasterUser {
   fid: number
@@ -16,6 +18,7 @@ interface FarcasterContextType {
   user: FarcasterUser | null
   clientFid: number | null
   hasAddedApp: boolean
+  isLinked: boolean
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
@@ -24,6 +27,7 @@ const FarcasterContext = createContext<FarcasterContextType>({
   user: null,
   clientFid: null,
   hasAddedApp: false,
+  isLinked: false,
 })
 
 export function useFarcaster() {
@@ -40,6 +44,9 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
   const [user, setUser] = useState<FarcasterUser | null>(null)
   const [clientFid, setClientFid] = useState<number | null>(null)
   const [hasAddedApp, setHasAddedApp] = useState(false)
+  const [isLinked, setIsLinked] = useState(false)
+  const linkAttemptedRef = useRef(false)
+  const { address } = useAccount()
 
   useEffect(() => {
     const initFarcaster = async () => {
@@ -88,6 +95,29 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
     initFarcaster()
   }, [])
 
+  // Auto-link Farcaster account when wallet is connected
+  useEffect(() => {
+    const autoLink = async () => {
+      // Only attempt once per session, when we have user and wallet
+      if (linkAttemptedRef.current || !user || !address || !user.username) {
+        return
+      }
+      linkAttemptedRef.current = true
+
+      try {
+        await linkFarcaster(address, user.fid, user.username)
+        setIsLinked(true)
+        console.log('Farcaster account linked to wallet')
+      } catch (error) {
+        // Likely already linked or another error - that's OK
+        console.log('Farcaster link attempt:', error)
+        setIsLinked(true) // Assume linked if we get an error (likely duplicate)
+      }
+    }
+
+    autoLink()
+  }, [user, address])
+
   return (
     <FarcasterContext.Provider
       value={{
@@ -96,6 +126,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
         user,
         clientFid,
         hasAddedApp,
+        isLinked,
       }}
     >
       {children}

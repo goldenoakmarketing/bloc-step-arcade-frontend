@@ -39,8 +39,15 @@ const GAME_EMOJIS: Record<string, string> = {
   breakout: '🧱',
 }
 
-// Submit score to backend
-async function submitScore(walletAddress: string, gameId: string, score: number): Promise<{ rank: number | null }> {
+// Submit score to backend with Farcaster data
+async function submitScore(
+  walletAddress: string,
+  gameId: string,
+  score: number,
+  farcasterUsername?: string,
+  farcasterFid?: number,
+  farcasterPfp?: string
+): Promise<{ rank: number | null }> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://bloc-step-arcade-backend-production.up.railway.app'
     const res = await fetch(`${apiUrl}/api/v1/leaderboards/game/${gameId}/score`, {
@@ -49,7 +56,12 @@ async function submitScore(walletAddress: string, gameId: string, score: number)
         'Content-Type': 'application/json',
         'X-Wallet-Address': walletAddress,
       },
-      body: JSON.stringify({ score }),
+      body: JSON.stringify({
+        score,
+        farcasterUsername,
+        farcasterFid,
+        farcasterPfp,
+      }),
     })
     const json = await res.json()
     if (json.success) {
@@ -312,7 +324,7 @@ export function GameWrapper({
   onBuyTime,
   isPurchasing = false,
 }: GameWrapperProps) {
-  const { isInFarcaster } = useFarcaster()
+  const { isInFarcaster, user: farcasterUser } = useFarcaster()
   const { address } = useAccount()
   const [gameState, setGameState] = useState<'ready' | 'playing' | 'paused' | 'gameover'>('ready')
   const [isInsertingQuarter, setIsInsertingQuarter] = useState(false)
@@ -379,7 +391,14 @@ export function GameWrapper({
 
     // Submit score to backend and get rank
     if (address && score > 0) {
-      const { rank } = await submitScore(address, gameId, score)
+      const { rank } = await submitScore(
+        address,
+        gameId,
+        score,
+        farcasterUser?.username,
+        farcasterUser?.fid,
+        farcasterUser?.pfpUrl
+      )
       setPlayerRank(rank || 0)
     }
 
@@ -396,7 +415,7 @@ export function GameWrapper({
       })
     }
     setLeaderboard(entries)
-  }, [score, highScore, gameId, address])
+  }, [score, highScore, gameId, address, farcasterUser])
 
   // Watch for time running out (timer is managed globally)
   useEffect(() => {

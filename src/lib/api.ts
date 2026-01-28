@@ -147,12 +147,15 @@ export async function getGameLeaderboard(gameId: string, limit = 20): Promise<Ga
 export async function submitGameScore(
   walletAddress: string,
   gameId: string,
-  score: number
+  score: number,
+  farcasterUsername?: string,
+  farcasterFid?: number,
+  farcasterPfp?: string
 ): Promise<{ id: string; gameId: string; score: string; rank: number | null }> {
   return fetchApi(`/leaderboards/game/${gameId}/score`, {
     method: 'POST',
     headers: { 'X-Wallet-Address': walletAddress },
-    body: JSON.stringify({ score }),
+    body: JSON.stringify({ score, farcasterUsername, farcasterFid, farcasterPfp }),
   })
 }
 
@@ -165,6 +168,19 @@ export async function reportTimeConsumed(
     method: 'POST',
     headers: { 'X-Wallet-Address': walletAddress },
     body: JSON.stringify({ seconds }),
+  })
+}
+
+// Link Farcaster account to wallet
+export async function linkFarcaster(
+  walletAddress: string,
+  fid: number,
+  username: string
+): Promise<{ id: string; walletAddress: string; farcasterFid: number; farcasterUsername: string }> {
+  return fetchApi('/players/link-farcaster', {
+    method: 'POST',
+    headers: { 'X-Wallet-Address': walletAddress },
+    body: JSON.stringify({ walletAddress, fid, username }),
   })
 }
 
