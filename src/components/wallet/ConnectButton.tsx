@@ -1,6 +1,7 @@
 'use client'
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
+import type { Connector } from 'wagmi'
 import { useState } from 'react'
 
 export function ConnectButton() {
@@ -62,7 +63,7 @@ export function ConnectButton() {
             <h2 className="text-xl font-bold mb-6 text-center">Connect Wallet</h2>
 
             <div className="space-y-3">
-              {connectors.map((connector: { uid: string; name: string }) => (
+              {connectors.map((connector: Connector) => (
                 <button
                   key={connector.uid}
                   onClick={() => {
