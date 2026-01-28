@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * Breakout - Classic brick-breaking game
+ * Breakout - Classic brick-breaking game with levels
  * Break all the bricks with a bouncing ball and paddle.
+ * Features 5 unique level layouts that cycle infinitely with increasing speed.
  * Original Breakout by Atari (1976)
  */
 
@@ -15,37 +16,153 @@ const PADDLE_WIDTH = 60
 const PADDLE_HEIGHT = 10
 const PADDLE_Y = CANVAS_HEIGHT - 30
 const BALL_RADIUS = 5
-const BALL_SPEED = 4
-const BRICK_ROWS = 6
+const BASE_BALL_SPEED = 4
 const BRICK_COLS = 8
 const BRICK_WIDTH = (CANVAS_WIDTH - 20) / BRICK_COLS
 const BRICK_HEIGHT = 16
 const BRICK_TOP = 60
 const BRICK_GAP = 2
 const PADDLE_SPEED = 8
+const POINTS_PER_BRICK = 10
+const SPEED_INCREASE_PER_CYCLE = 0.3 // 30% increase every 5 levels
 
-const ROW_COLORS = [
+const BRICK_COLORS = [
   '#ef4444', // red
   '#f97316', // orange
   '#eab308', // yellow
   '#22c55e', // green
   '#3b82f6', // blue
   '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#14b8a6', // teal
 ]
-
-const ROW_POINTS = [70, 70, 40, 40, 20, 20]
 
 interface Brick {
   row: number
   col: number
   alive: boolean
+  color: string
 }
 
+// Level 1: Standard rows (easy warmup) - 6 rows
+function createLevel1(): Brick[] {
+  const bricks: Brick[] = []
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < BRICK_COLS; col++) {
+      bricks.push({ row, col, alive: true, color: BRICK_COLORS[row % BRICK_COLORS.length] })
+    }
+  }
+  return bricks
+}
+
+// Level 2: Pyramid shape
+function createLevel2(): Brick[] {
+  const bricks: Brick[] = []
+  const maxRows = 7
+  for (let row = 0; row < maxRows; row++) {
+    const bricksInRow = maxRows - row
+    const startCol = Math.floor((BRICK_COLS - bricksInRow) / 2)
+    for (let i = 0; i < bricksInRow; i++) {
+      bricks.push({ row, col: startCol + i, alive: true, color: BRICK_COLORS[row % BRICK_COLORS.length] })
+    }
+  }
+  return bricks
+}
+
+// Level 3: Checkerboard pattern
+function createLevel3(): Brick[] {
+  const bricks: Brick[] = []
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < BRICK_COLS; col++) {
+      if ((row + col) % 2 === 0) {
+        bricks.push({ row, col, alive: true, color: BRICK_COLORS[row % BRICK_COLORS.length] })
+      }
+    }
+  }
+  return bricks
+}
+
+// Level 4: Diamond/fortress with gaps
+function createLevel4(): Brick[] {
+  const bricks: Brick[] = []
+  // Diamond shape
+  const pattern = [
+    [0, 0, 0, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 1, 1, 0],
+    [1, 1, 0, 0, 0, 0, 1, 1],
+    [1, 1, 0, 0, 0, 0, 1, 1],
+    [0, 1, 1, 0, 0, 1, 1, 0],
+    [0, 0, 1, 1, 1, 1, 0, 0],
+    [0, 0, 0, 1, 1, 0, 0, 0],
+  ]
+  for (let row = 0; row < pattern.length; row++) {
+    for (let col = 0; col < BRICK_COLS; col++) {
+      if (pattern[row][col] === 1) {
+        bricks.push({ row, col, alive: true, color: BRICK_COLORS[row % BRICK_COLORS.length] })
+      }
+    }
+  }
+  return bricks
+}
+
+// Level 5: Inverted pyramid + scattered
+function createLevel5(): Brick[] {
+  const bricks: Brick[] = []
+  // Inverted pyramid at top
+  for (let row = 0; row < 4; row++) {
+    const bricksInRow = row + 5
+    const startCol = Math.floor((BRICK_COLS - bricksInRow) / 2)
+    for (let i = 0; i < bricksInRow && startCol + i < BRICK_COLS; i++) {
+      if (startCol + i >= 0) {
+        bricks.push({ row, col: startCol + i, alive: true, color: BRICK_COLORS[row % BRICK_COLORS.length] })
+      }
+    }
+  }
+  // Scattered bricks below
+  const scatteredPattern = [
+    [1, 0, 1, 0, 0, 1, 0, 1],
+    [0, 1, 0, 1, 1, 0, 1, 0],
+    [1, 0, 0, 1, 1, 0, 0, 1],
+  ]
+  for (let row = 0; row < scatteredPattern.length; row++) {
+    for (let col = 0; col < BRICK_COLS; col++) {
+      if (scatteredPattern[row][col] === 1) {
+        bricks.push({ row: row + 5, col, alive: true, color: BRICK_COLORS[(row + 4) % BRICK_COLORS.length] })
+      }
+    }
+  }
+  return bricks
+}
+
+const LEVEL_GENERATORS = [createLevel1, createLevel2, createLevel3, createLevel4, createLevel5]
+
+function getLevelBricks(level: number): Brick[] {
+  const layoutIndex = (level - 1) % 5
+  return LEVEL_GENERATORS[layoutIndex]()
+}
+
+function getBallSpeed(level: number): number {
+  const speedMultiplier = Math.pow(1 + SPEED_INCREASE_PER_CYCLE, Math.floor((level - 1) / 5))
+  return BASE_BALL_SPEED * speedMultiplier
+}
+
+function getLivesMultiplier(lives: number): number {
+  if (lives >= 3) return 2.0
+  if (lives === 2) return 1.5
+  return 1.0
+}
+
+type GameState = 'title' | 'playing' | 'levelComplete' | 'gameOver'
+
 export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
-  const [gameStarted, setGameStarted] = useState(false)
+  const [gameState, setGameState] = useState<GameState>('title')
   const [tick, setTick] = useState(0)
+  const [level, setLevel] = useState(1)
   const [lives, setLives] = useState(3)
-  const [bricksLeft, setBricksLeft] = useState(BRICK_ROWS * BRICK_COLS)
+  const [totalScore, setTotalScore] = useState(0)
+  const [levelScore, setLevelScore] = useState(0)
+  const [bricksLeft, setBricksLeft] = useState(0)
   const [waitingLaunch, setWaitingLaunch] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const keysRef = useRef<Set<string>>(new Set())
@@ -55,49 +172,75 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
     paddleX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
     ballX: CANVAS_WIDTH / 2,
     ballY: PADDLE_Y - BALL_RADIUS - 1,
-    ballVelX: BALL_SPEED * 0.7,
-    ballVelY: -BALL_SPEED,
+    ballVelX: BASE_BALL_SPEED * 0.7,
+    ballVelY: -BASE_BALL_SPEED,
     bricks: [] as Brick[],
     waitingLaunch: true,
+    currentSpeed: BASE_BALL_SPEED,
   })
 
-  const initBricks = useCallback(() => {
-    const bricks: Brick[] = []
-    for (let row = 0; row < BRICK_ROWS; row++) {
-      for (let col = 0; col < BRICK_COLS; col++) {
-        bricks.push({ row, col, alive: true })
-      }
-    }
-    gameRef.current.bricks = bricks
-    setBricksLeft(BRICK_ROWS * BRICK_COLS)
+  const initLevel = useCallback((levelNum: number) => {
+    const g = gameRef.current
+    g.bricks = getLevelBricks(levelNum)
+    g.currentSpeed = getBallSpeed(levelNum)
+    setBricksLeft(g.bricks.length)
+    setLevelScore(0)
   }, [])
 
   const resetBall = useCallback(() => {
     const g = gameRef.current
     g.ballX = g.paddleX + PADDLE_WIDTH / 2
     g.ballY = PADDLE_Y - BALL_RADIUS - 1
-    g.ballVelX = (Math.random() > 0.5 ? 1 : -1) * BALL_SPEED * 0.7
-    g.ballVelY = -BALL_SPEED
+    g.ballVelX = (Math.random() > 0.5 ? 1 : -1) * g.currentSpeed * 0.7
+    g.ballVelY = -g.currentSpeed
     g.waitingLaunch = true
     setWaitingLaunch(true)
   }, [])
 
   const startGame = useCallback(() => {
-    if (!gameStarted) {
-      setGameStarted(true)
-      setLives(3)
-      gameRef.current.paddleX = CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2
-      initBricks()
-      resetBall()
-    }
-  }, [gameStarted, initBricks, resetBall])
+    setGameState('playing')
+    setLevel(1)
+    setLives(3)
+    setTotalScore(0)
+    setLevelScore(0)
+    gameOverCalledRef.current = false
+    gameRef.current.paddleX = CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2
+    initLevel(1)
+    resetBall()
+  }, [initLevel, resetBall])
+
+  const startNextLevel = useCallback(() => {
+    const nextLevel = level + 1
+    setLevel(nextLevel)
+    setGameState('playing')
+    initLevel(nextLevel)
+    resetBall()
+  }, [level, initLevel, resetBall])
 
   const launch = useCallback(() => {
-    if (gameRef.current.waitingLaunch) {
+    if (gameRef.current.waitingLaunch && gameState === 'playing') {
       gameRef.current.waitingLaunch = false
       setWaitingLaunch(false)
     }
-  }, [])
+  }, [gameState])
+
+  const handleLevelComplete = useCallback(() => {
+    const multiplier = getLivesMultiplier(lives)
+    const bonusScore = Math.floor(levelScore * multiplier)
+    const scoreToAdd = bonusScore - levelScore // Additional bonus from multiplier
+
+    setTotalScore(prev => prev + scoreToAdd)
+    onScore(scoreToAdd) // Report bonus score
+    setGameState('levelComplete')
+  }, [lives, levelScore, onScore])
+
+  const handleGameOver = useCallback(() => {
+    if (!gameOverCalledRef.current) {
+      gameOverCalledRef.current = true
+      setGameState('gameOver')
+      onGameOver()
+    }
+  }, [onGameOver])
 
   // Keyboard controls
   useEffect(() => {
@@ -106,9 +249,11 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
       if (e.key === 'ArrowRight' || e.key === 'd') keysRef.current.add('right')
       if (e.code === 'Space') {
         e.preventDefault()
-        if (!gameStarted) {
+        if (gameState === 'title') {
           startGame()
-        } else {
+        } else if (gameState === 'levelComplete') {
+          startNextLevel()
+        } else if (gameState === 'playing') {
           launch()
         }
       }
@@ -125,11 +270,11 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [startGame, launch, gameStarted])
+  }, [startGame, startNextLevel, launch, gameState])
 
   // Game loop
   useEffect(() => {
-    if (isPaused || !gameStarted) return
+    if (isPaused || gameState !== 'playing') return
 
     const gameLoop = setInterval(() => {
       const g = gameRef.current
@@ -179,7 +324,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
       ) {
         const hitPos = (g.ballX - g.paddleX) / PADDLE_WIDTH
         const angle = (hitPos - 0.5) * (Math.PI / 2.5)
-        const speed = Math.sqrt(g.ballVelX * g.ballVelX + g.ballVelY * g.ballVelY)
+        const speed = g.currentSpeed
         g.ballVelX = Math.sin(angle) * speed
         g.ballVelY = -Math.abs(Math.cos(angle) * speed)
         g.ballY = PADDLE_Y - BALL_RADIUS
@@ -219,7 +364,9 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
             g.ballVelY = -g.ballVelY
           }
 
-          onScore(ROW_POINTS[brick.row])
+          onScore(POINTS_PER_BRICK)
+          setLevelScore(prev => prev + POINTS_PER_BRICK)
+          setTotalScore(prev => prev + POINTS_PER_BRICK)
           break // One brick per frame
         }
       }
@@ -229,10 +376,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
         setBricksLeft(remaining)
 
         if (remaining === 0) {
-          if (!gameOverCalledRef.current) {
-            gameOverCalledRef.current = true
-            onGameOver()
-          }
+          handleLevelComplete()
           return
         }
       }
@@ -242,10 +386,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
         setLives(prev => {
           const newLives = prev - 1
           if (newLives <= 0) {
-            if (!gameOverCalledRef.current) {
-              gameOverCalledRef.current = true
-              onGameOver()
-            }
+            handleGameOver()
           } else {
             resetBall()
           }
@@ -257,7 +398,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
     }, 16)
 
     return () => clearInterval(gameLoop)
-  }, [isPaused, gameStarted, onScore, onGameOver, resetBall])
+  }, [isPaused, gameState, onScore, handleLevelComplete, handleGameOver, resetBall])
 
   // Draw
   useEffect(() => {
@@ -282,7 +423,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
       const bw = BRICK_WIDTH - BRICK_GAP
       const bh = BRICK_HEIGHT
 
-      ctx.fillStyle = ROW_COLORS[brick.row]
+      ctx.fillStyle = brick.color
       ctx.fillRect(bx, by, bw, bh)
 
       // Highlight
@@ -302,7 +443,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
     ctx.arc(g.ballX, g.ballY, BALL_RADIUS, 0, Math.PI * 2)
     ctx.fill()
 
-    // Lives indicator
+    // UI Header
     ctx.fillStyle = '#ef4444'
     ctx.font = '14px sans-serif'
     ctx.textAlign = 'left'
@@ -310,62 +451,145 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
       ctx.fillText('♥', 10 + i * 18, 20)
     }
 
-    // Bricks remaining
-    ctx.fillStyle = '#666'
+    // Level indicator
+    ctx.fillStyle = '#ffd700'
+    ctx.font = 'bold 14px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(`LVL ${level}`, CANVAS_WIDTH / 2, 20)
+
+    // Score
+    ctx.fillStyle = '#aaa'
     ctx.font = '12px sans-serif'
     ctx.textAlign = 'right'
-    ctx.fillText(`${bricksLeft} left`, CANVAS_WIDTH - 10, 20)
+    ctx.fillText(`${totalScore}`, CANVAS_WIDTH - 10, 20)
 
-    // Start message
-    if (!gameStarted) {
-      ctx.fillStyle = 'rgba(0,0,0,0.7)'
+    // Bricks remaining
+    ctx.fillStyle = '#666'
+    ctx.font = '10px sans-serif'
+    ctx.textAlign = 'right'
+    ctx.fillText(`${bricksLeft} left`, CANVAS_WIDTH - 10, 35)
+
+    // Speed indicator (show when above base speed)
+    const speedMultiplier = Math.pow(1 + SPEED_INCREASE_PER_CYCLE, Math.floor((level - 1) / 5))
+    if (speedMultiplier > 1) {
+      ctx.fillStyle = '#f97316'
+      ctx.font = '10px sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText(`${speedMultiplier.toFixed(1)}x`, 10, 35)
+    }
+
+    // Title screen
+    if (gameState === 'title') {
+      ctx.fillStyle = 'rgba(0,0,0,0.8)'
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
       ctx.fillStyle = 'white'
       ctx.textAlign = 'center'
-      ctx.font = 'bold 20px sans-serif'
-      ctx.fillText('BREAKOUT', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 20)
+      ctx.font = 'bold 24px sans-serif'
+      ctx.fillText('BREAKOUT', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 40)
       ctx.font = '14px sans-serif'
-      ctx.fillText('Break all the bricks!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10)
-      ctx.fillText('Tap to Start', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 35)
+      ctx.fillStyle = '#aaa'
+      ctx.fillText('5 unique levels', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 10)
+      ctx.fillText('Speed increases every 5 levels', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10)
+      ctx.fillStyle = '#ffd700'
+      ctx.font = 'bold 14px sans-serif'
+      ctx.fillText('TAP TO START', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 50)
+    }
+
+    // Level complete screen
+    if (gameState === 'levelComplete') {
+      ctx.fillStyle = 'rgba(0,0,0,0.85)'
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+
+      ctx.fillStyle = '#22c55e'
+      ctx.textAlign = 'center'
+      ctx.font = 'bold 24px sans-serif'
+      ctx.fillText(`LEVEL ${level}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60)
+      ctx.fillText('COMPLETE!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 30)
+
+      const multiplier = getLivesMultiplier(lives)
+      ctx.fillStyle = '#aaa'
+      ctx.font = '14px sans-serif'
+      ctx.fillText(`Level Score: ${levelScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 10)
+
+      ctx.fillStyle = '#ffd700'
+      ctx.fillText(`Lives Bonus: ${multiplier.toFixed(1)}x`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 35)
+
+      const bonusScore = Math.floor(levelScore * multiplier)
+      ctx.font = 'bold 16px sans-serif'
+      ctx.fillText(`= ${bonusScore} pts`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60)
+
+      ctx.fillStyle = 'white'
+      ctx.font = '12px sans-serif'
+      ctx.fillText(`Total: ${totalScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 90)
+
+      ctx.fillStyle = '#ffd700'
+      ctx.font = 'bold 14px sans-serif'
+      ctx.fillText('TAP TO CONTINUE', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 130)
+    }
+
+    // Game over screen
+    if (gameState === 'gameOver') {
+      ctx.fillStyle = 'rgba(0,0,0,0.85)'
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+
+      ctx.fillStyle = '#ef4444'
+      ctx.textAlign = 'center'
+      ctx.font = 'bold 28px sans-serif'
+      ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 40)
+
+      ctx.fillStyle = '#aaa'
+      ctx.font = '14px sans-serif'
+      ctx.fillText(`Reached Level ${level}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+
+      ctx.fillStyle = '#ffd700'
+      ctx.font = 'bold 20px sans-serif'
+      ctx.fillText(`Final Score: ${totalScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 35)
     }
 
     // Launch prompt
-    if (gameStarted && waitingLaunch) {
+    if (gameState === 'playing' && waitingLaunch) {
       ctx.fillStyle = 'rgba(255,255,255,0.6)'
       ctx.textAlign = 'center'
       ctx.font = '14px sans-serif'
-      ctx.fillText('Tap to Launch', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 40)
+      ctx.fillText('Tap to Launch', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60)
     }
-  }, [gameStarted, lives, bricksLeft, waitingLaunch, tick])
+  }, [gameState, level, lives, totalScore, levelScore, bricksLeft, waitingLaunch, tick])
 
   // Touch/mouse controls
   const handleTouch = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (!gameStarted) {
+    if (gameState === 'title') {
       startGame()
       return
     }
 
-    if (gameRef.current.waitingLaunch) {
-      launch()
+    if (gameState === 'levelComplete') {
+      startNextLevel()
+      return
     }
 
-    const canvas = canvasRef.current
-    if (!canvas) return
+    if (gameState === 'playing') {
+      if (gameRef.current.waitingLaunch) {
+        launch()
+      }
 
-    const rect = canvas.getBoundingClientRect()
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
-    const x = (clientX - rect.left) * (CANVAS_WIDTH / rect.width)
-    gameRef.current.paddleX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, x - PADDLE_WIDTH / 2))
-  }, [gameStarted, startGame, launch])
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const rect = canvas.getBoundingClientRect()
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      const x = (clientX - rect.left) * (CANVAS_WIDTH / rect.width)
+      gameRef.current.paddleX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, x - PADDLE_WIDTH / 2))
+    }
+  }, [gameState, startGame, startNextLevel, launch])
 
   const handleMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (!gameStarted || !canvasRef.current) return
+    if (gameState !== 'playing' || !canvasRef.current) return
 
     const rect = canvasRef.current.getBoundingClientRect()
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const x = (clientX - rect.left) * (CANVAS_WIDTH / rect.width)
     gameRef.current.paddleX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, x - PADDLE_WIDTH / 2))
-  }, [gameStarted])
+  }, [gameState])
 
   return (
     <div className="text-center">
@@ -374,7 +598,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
         onClick={handleTouch}
-        onMouseMove={gameStarted ? handleMove : undefined}
+        onMouseMove={gameState === 'playing' ? handleMove : undefined}
         onTouchStart={handleTouch}
         onTouchMove={handleMove}
         className="mx-auto rounded-lg border-2 border-zinc-700 cursor-pointer select-none"
@@ -404,7 +628,7 @@ export function Breakout({ onScore, onGameOver, isPaused }: GameProps) {
       </div>
 
       <p className="text-muted text-sm mt-4">
-        Break all the bricks! Don't let the ball drop.
+        Clear all bricks! Keep your balls to earn bonus multipliers.
       </p>
 
       <p className="text-zinc-600 text-xs mt-2">
