@@ -38,7 +38,8 @@ interface FarcasterProviderProps {
   children: ReactNode
 }
 
-export function FarcasterProvider({ children }: FarcasterProviderProps) {
+// Inner component that uses wagmi hooks - only rendered after mount
+function FarcasterProviderInner({ children }: FarcasterProviderProps) {
   const [isInFarcaster, setIsInFarcaster] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<FarcasterUser | null>(null)
@@ -132,4 +133,33 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
       {children}
     </FarcasterContext.Provider>
   )
+}
+
+// Outer component that handles SSR
+export function FarcasterProvider({ children }: FarcasterProviderProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // During SSR, render children without Farcaster context
+  if (!mounted) {
+    return (
+      <FarcasterContext.Provider
+        value={{
+          isInFarcaster: false,
+          isLoading: true,
+          user: null,
+          clientFid: null,
+          hasAddedApp: false,
+          isLinked: false,
+        }}
+      >
+        {children}
+      </FarcasterContext.Provider>
+    )
+  }
+
+  return <FarcasterProviderInner>{children}</FarcasterProviderInner>
 }

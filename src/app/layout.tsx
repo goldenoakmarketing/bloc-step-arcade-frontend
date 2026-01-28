@@ -28,8 +28,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <FarcasterProvider>
-          <Web3Provider>
+        <Web3Provider>
+          <FarcasterProvider>
             <ArcadeTimerProvider>
               <main className="pb-20">
                 {children}
@@ -37,8 +37,8 @@ export default function RootLayout({
               <Header />
               <OnChatWidget />
             </ArcadeTimerProvider>
-          </Web3Provider>
-        </FarcasterProvider>
+          </FarcasterProvider>
+        </Web3Provider>
       </body>
     </html>
   )
