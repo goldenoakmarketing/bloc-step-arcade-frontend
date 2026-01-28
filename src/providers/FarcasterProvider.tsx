@@ -140,9 +140,14 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
 
       try {
         // Prompt user to add the mini app (which also enables notifications)
-        const result = await sdk.actions.addFrame()
+        // Using 'as any' because SDK types vary between versions
+        const result = await sdk.actions.addFrame() as any
 
-        if (result.type === 'added' && result.notificationDetails) {
+        // Check various possible response shapes from different SDK versions
+        const wasAdded = result?.added || result?.type === 'added' || result?.success
+        const notificationDetails = result?.notificationDetails || result?.notification
+
+        if (wasAdded && notificationDetails?.token && notificationDetails?.url) {
           setHasAddedApp(true)
           setNotificationsEnabled(true)
 
@@ -150,11 +155,11 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
           await registerNotificationToken(
             address,
             user.fid,
-            result.notificationDetails.url,
-            result.notificationDetails.token
+            notificationDetails.url,
+            notificationDetails.token
           )
           console.log('Notification token registered with backend')
-        } else if (result.type === 'added') {
+        } else if (wasAdded) {
           setHasAddedApp(true)
           console.log('App added but notifications not enabled')
         }
@@ -176,18 +181,23 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
     }
 
     try {
-      const result = await sdk.actions.addFrame()
+      // Using 'as any' because SDK types vary between versions
+      const result = await sdk.actions.addFrame() as any
 
-      if (result.type === 'added') {
+      // Check various possible response shapes from different SDK versions
+      const wasAdded = result?.added || result?.type === 'added' || result?.success
+      const notificationDetails = result?.notificationDetails || result?.notification
+
+      if (wasAdded) {
         setHasAddedApp(true)
 
-        if (result.notificationDetails) {
+        if (notificationDetails?.token && notificationDetails?.url) {
           setNotificationsEnabled(true)
           await registerNotificationToken(
             address,
             user.fid,
-            result.notificationDetails.url,
-            result.notificationDetails.token
+            notificationDetails.url,
+            notificationDetails.token
           )
         }
         return true
