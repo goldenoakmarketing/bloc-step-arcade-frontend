@@ -48,14 +48,22 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
     if (!address) return
 
     try {
+      console.log('[CoinButton] Fetching claim info for:', address)
       const res = await fetch(`${API_BASE}/api/v1/pool/claim-info/${address}`)
       const data = await res.json()
+      console.log('[CoinButton] Claim info response:', data)
 
-      if (data.success) {
-        setClaimInfo(data.data)
+      if (data.success && data.data) {
+        setClaimInfo({
+          canClaim: data.data.canClaim ?? false,
+          nextClaimTime: data.data.nextClaimTime,
+          streak: data.data.streak ?? 0,
+          maxClaimable: data.data.maxClaimable ?? 1,
+          totalClaimed: data.data.totalClaimed ?? 0,
+        })
       }
     } catch (err) {
-      console.error('Failed to fetch claim info:', err)
+      console.error('[CoinButton] Failed to fetch claim info:', err)
     }
   }
 
@@ -129,6 +137,8 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
 
     setTimeout(() => setIsPressed(false), 200)
 
+    console.log('[CoinButton] Starting claim request for wallet:', address)
+
     try {
       const res = await fetch(`${API_BASE}/api/v1/pool/claim`, {
         method: 'POST',
@@ -139,24 +149,47 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
       })
 
       const data = await res.json()
+      console.log('[CoinButton] Claim response:', { status: res.status, data })
 
       if (data.success) {
-        setLastFound(data.data.claimed)
-        if (data.data.claimed > 0) {
-          onClaim(data.data.claimed)
+        // Successful claim
+        const claimed = data.data?.claimed ?? 0
+        console.log('[CoinButton] Claim successful, claimed:', claimed)
+        setLastFound(claimed)
+        if (claimed > 0) {
+          onClaim(claimed)
         }
-        // Refresh claim info
-        await fetchClaimInfo()
+        // Update claimInfo with response data (now on cooldown)
+        if (data.data) {
+          setClaimInfo({
+            canClaim: data.data.canClaim ?? false,
+            nextClaimTime: data.data.nextClaimTime,
+            streak: data.data.streak ?? 0,
+            maxClaimable: data.data.maxClaimable ?? 1,
+            totalClaimed: claimInfo?.totalClaimed ? claimInfo.totalClaimed + claimed : claimed,
+          })
+        }
       } else if (res.status === 429) {
-        // Cooldown active
-        setClaimInfo(data.data)
-        setLastFound(0)
+        // Cooldown active - update claimInfo, don't show "nothing found"
+        console.log('[CoinButton] Cooldown active (429)')
+        if (data.data) {
+          setClaimInfo({
+            canClaim: false,
+            nextClaimTime: data.data.nextClaimTime,
+            streak: data.data.streak ?? 0,
+            maxClaimable: data.data.maxClaimable ?? 1,
+            totalClaimed: claimInfo?.totalClaimed ?? 0,
+          })
+        }
+        // Don't set lastFound - let isOnCooldown show "Come back later"
       } else {
+        // Other error
+        console.error('[CoinButton] Claim failed:', data.error)
         setError(data.error || 'Claim failed')
         setLastFound(0)
       }
     } catch (err) {
-      console.error('Claim error:', err)
+      console.error('[CoinButton] Network error:', err)
       setError('Network error')
       setLastFound(0)
     } finally {
@@ -258,10 +291,14 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
           lastFound > 0 ? (
             <span className="text-green-400">Found {lastFound} quarter{lastFound > 1 ? 's' : ''}!</span>
           ) : (
-            'Nothing this time'
+            <span className="text-zinc-400">Pool empty - try later</span>
           )
         ) : claimInfo ? (
-          `Up to ${claimInfo.maxClaimable}Q available`
+          claimInfo.maxClaimable > 0 ? (
+            `Up to ${claimInfo.maxClaimable}Q available`
+          ) : (
+            'Check the pool'
+          )
         ) : (
           'Try your luck'
         )}
