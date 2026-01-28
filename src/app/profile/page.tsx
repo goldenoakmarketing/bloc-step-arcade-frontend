@@ -176,7 +176,7 @@ export default function ProfilePage() {
 
   const handleConnect = () => {
     // Try Farcaster connector first, then injected
-    const farcasterConnector = connectors.find(c => c.name.toLowerCase().includes('farcaster'))
+    const farcasterConnector = connectors.find((c: { name: string }) => c.name.toLowerCase().includes('farcaster'))
     const connector = farcasterConnector || connectors[0]
     if (connector) {
       connect({ connector })
