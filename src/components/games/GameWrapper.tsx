@@ -145,7 +145,7 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
   const [isSharing, setIsSharing] = useState(false)
 
   // URLs for sharing
-  const appUrl = 'https://blocsteparcade.netlify.app'
+  const appUrl = 'blocsteparcade.netlify.app'
   // Leaderboard image from backend - generates dynamic PNG with top players
   const leaderboardImageUrl = `https://bloc-step-arcade-backend-production.up.railway.app/api/v1/leaderboards/image/${gameId}`
 
