@@ -12,6 +12,6 @@
     "imageUrl": "https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg",
     "splashImageUrl": "https://raw.githubusercontent.com/goldenoakmarketing/bloc-step-arcade-frontend/main/public/arcade-cabinet.jpg",
     "splashBackgroundColor": "#09090b",
-    "webhookUrl": ""
+    "webhookUrl": "https://bloc-step-arcade-backend-production.up.railway.app/api/v1/webhook/farcaster"
   }
 }
