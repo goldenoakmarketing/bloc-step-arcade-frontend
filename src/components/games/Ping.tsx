@@ -248,6 +248,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
           if (newScore >= WIN_SCORE) {
             setGameWon(true)
             onScore(100) // Bonus for winning
+            onGameOver() // Trigger score submission + share card
           } else {
             onScore(10 * playerScored)
           }
