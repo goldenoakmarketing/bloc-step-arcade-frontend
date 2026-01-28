@@ -100,7 +100,7 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
   const isOnCooldown = claimInfo && !claimInfo.canClaim && claimInfo.nextClaimTime && !cooldownExpired
 
   const handleConnect = () => {
-    const farcasterConnector = connectors.find(c => c.name.toLowerCase().includes('farcaster'))
+    const farcasterConnector = connectors.find((c: { name: string }) => c.name.toLowerCase().includes('farcaster'))
     const connector = farcasterConnector || connectors[0]
     if (connector) {
       connect({ connector })
