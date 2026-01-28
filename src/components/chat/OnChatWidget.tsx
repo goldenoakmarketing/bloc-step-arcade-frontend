@@ -22,7 +22,7 @@ export function OnChatWidget() {
   const pathname = usePathname()
 
   // Hide on gameplay pages
-  const isGameplayPage = pathname?.startsWith('/play/') || pathname?.startsWith('/game/')
+  const isGameplayPage = pathname?.startsWith('/play') || pathname?.startsWith('/game')
 
   useEffect(() => {
     // Mount OnChat when script is loaded and panel is open
