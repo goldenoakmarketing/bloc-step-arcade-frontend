@@ -62,7 +62,7 @@ export function ConnectButton() {
             <h2 className="text-xl font-bold mb-6 text-center">Connect Wallet</h2>
 
             <div className="space-y-3">
-              {connectors.map((connector) => (
+              {connectors.map((connector: { uid: string; name: string }) => (
                 <button
                   key={connector.uid}
                   onClick={() => {
