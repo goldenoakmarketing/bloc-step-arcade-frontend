@@ -174,18 +174,21 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
   const handleShareFarcaster = async () => {
     setIsSharing(true)
 
+    // Include app link in the text for clickability
+    const shareTextWithLink = `${getShareText()}\n\n${appUrl}`
+
     try {
       if (isInFarcaster) {
         // Use Farcaster Mini App SDK to open native cast composer
-        // Embed the leaderboard image for rich preview
+        // Text includes the message + app link, embeds include the leaderboard image
         await sdk.actions.composeCast({
-          text: getShareText(),
+          text: shareTextWithLink,
           embeds: [leaderboardImageUrl as `https://${string}`],
         })
         onShare()
       } else {
         // Outside Farcaster - open Warpcast compose URL in browser
-        const text = encodeURIComponent(getShareText())
+        const text = encodeURIComponent(shareTextWithLink)
         const embed = encodeURIComponent(leaderboardImageUrl)
         const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
         window.open(warpcastUrl, '_blank', 'noopener,noreferrer')
@@ -195,8 +198,8 @@ function ShareCard({ gameId, gameName, gameIcon, score, highScore, isNewHighScor
       console.error('Failed to share via SDK:', error)
       // Fall back to opening Warpcast URL
       try {
-        const text = encodeURIComponent(getShareText())
-        const embed = encodeURIComponent(appUrl)
+        const text = encodeURIComponent(shareTextWithLink)
+        const embed = encodeURIComponent(leaderboardImageUrl)
         const warpcastUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${embed}`
 
         if (isInFarcaster) {
