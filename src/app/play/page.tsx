@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useCallback } from 'react'
 import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
 import { encodeFunctionData } from 'viem'

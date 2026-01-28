@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 export default function InfoPage() {
   return (
     <div className="min-h-screen px-4 py-8">
