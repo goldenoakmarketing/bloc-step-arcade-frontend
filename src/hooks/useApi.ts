@@ -12,6 +12,8 @@ import {
   getYeetLeaderboard,
   getStakingLeaderboard,
   getTimePlayedLeaderboard,
+  getTipsSentLeaderboard,
+  getTipsReceivedLeaderboard,
   getPlayerRanks,
   getStats,
   type Player,
@@ -122,18 +124,38 @@ export function useTimePlayedLeaderboard(limit = 20) {
   })
 }
 
+export function useTipsSentLeaderboard(limit = 20) {
+  return useQuery({
+    queryKey: ['leaderboard', 'tips-sent', limit],
+    queryFn: () => getTipsSentLeaderboard(limit),
+    staleTime: 60_000,
+  })
+}
+
+export function useTipsReceivedLeaderboard(limit = 20) {
+  return useQuery({
+    queryKey: ['leaderboard', 'tips-received', limit],
+    queryFn: () => getTipsReceivedLeaderboard(limit),
+    staleTime: 60_000,
+  })
+}
+
 // Combined leaderboard hook for the tabbed view
 export function useLeaderboards(limit = 10) {
   const yeet = useYeetLeaderboard(limit)
   const staking = useStakingLeaderboard(limit)
   const time = useTimePlayedLeaderboard(limit)
+  const tipsSent = useTipsSentLeaderboard(limit)
+  const tipsReceived = useTipsReceivedLeaderboard(limit)
 
   return {
     yeet: yeet.data ?? [],
     staking: staking.data ?? [],
     time: time.data ?? [],
-    isLoading: yeet.isLoading || staking.isLoading || time.isLoading,
-    error: yeet.error || staking.error || time.error,
+    tipsSent: tipsSent.data ?? [],
+    tipsReceived: tipsReceived.data ?? [],
+    isLoading: yeet.isLoading || staking.isLoading || time.isLoading || tipsSent.isLoading || tipsReceived.isLoading,
+    error: yeet.error || staking.error || time.error || tipsSent.error || tipsReceived.error,
   }
 }
 

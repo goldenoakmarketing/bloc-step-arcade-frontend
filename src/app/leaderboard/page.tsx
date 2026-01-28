@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useLeaderboards, useStats, usePlayerRanks, usePlayer } from '@/hooks/useApi'
 
-type LeaderboardType = 'lost' | 'staking' | 'time'
+type LeaderboardType = 'lost' | 'staking' | 'time' | 'tips-sent' | 'tips-received'
 
 interface LeaderboardEntry {
   rank: number
@@ -17,6 +17,8 @@ const tabs: { id: LeaderboardType; label: string }[] = [
   { id: 'lost', label: 'Donations' },
   { id: 'staking', label: 'Staking' },
   { id: 'time', label: 'Time Played' },
+  { id: 'tips-sent', label: 'Tips Sent' },
+  { id: 'tips-received', label: 'Tips Received' },
 ]
 
 const formatBlocAmount = (score: string) => {
@@ -36,33 +38,24 @@ const formatTimeSeconds = (seconds: number) => {
 
 export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<LeaderboardType>('lost')
-  const { yeet, staking, time, isLoading } = useLeaderboards(20)
+  const { yeet, staking, time, tipsSent, tipsReceived, isLoading } = useLeaderboards(20)
   const { data: stats } = useStats()
   const { data: playerRanks } = usePlayerRanks()
   const { data: playerData } = usePlayer()
 
+  const mapEntry = (e: { rank: number; farcasterUsername?: string; walletAddress: string; score: string }) => ({
+    rank: e.rank,
+    name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
+    type: e.farcasterUsername ? 'farcaster' : null,
+    anonymous: false,
+  })
+
   const leaderboardData: Record<LeaderboardType, LeaderboardEntry[]> = {
-    lost: yeet.map(e => ({
-      rank: e.rank,
-      name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
-      type: e.farcasterUsername ? 'farcaster' : null,
-      anonymous: false,
-      score: `${e.score}Q`
-    })),
-    staking: staking.map(e => ({
-      rank: e.rank,
-      name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
-      type: e.farcasterUsername ? 'farcaster' : null,
-      anonymous: false,
-      score: formatBlocAmount(e.score)
-    })),
-    time: time.map(e => ({
-      rank: e.rank,
-      name: e.farcasterUsername || `${e.walletAddress.slice(0,6)}...${e.walletAddress.slice(-4)}`,
-      type: e.farcasterUsername ? 'farcaster' : null,
-      anonymous: false,
-      score: formatTimeSeconds(Number(e.score))
-    }))
+    lost: yeet.map(e => ({ ...mapEntry(e), score: `${e.score}Q` })),
+    staking: staking.map(e => ({ ...mapEntry(e), score: formatBlocAmount(e.score) })),
+    time: time.map(e => ({ ...mapEntry(e), score: formatTimeSeconds(Number(e.score)) })),
+    'tips-sent': tipsSent.map(e => ({ ...mapEntry(e), score: `${e.score} tips` })),
+    'tips-received': tipsReceived.map(e => ({ ...mapEntry(e), score: `${e.score} tips` })),
   }
 
   const entries = leaderboardData[activeTab]
@@ -82,6 +75,10 @@ export default function LeaderboardPage() {
         return 'Top $BLOC stakers'
       case 'time':
         return 'Most quarters spent playing'
+      case 'tips-sent':
+        return 'Most generous tippers'
+      case 'tips-received':
+        return 'Most tipped players'
     }
   }
 
@@ -94,6 +91,9 @@ export default function LeaderboardPage() {
         return playerRanks.stakingRank
       case 'time':
         return playerRanks.timePlayedRank
+      case 'tips-sent':
+      case 'tips-received':
+        return null // No rank endpoint for tips yet
     }
   }
 
@@ -102,13 +102,18 @@ export default function LeaderboardPage() {
     switch (activeTab) {
       case 'lost':
         return `${playerData.stats?.totalYeeted || '0'}Q`
-      case 'staking':
+      case 'staking': {
         // Convert wei to tokens (divide by 1e18) to match leaderboard display
         const stakingWei = BigInt(playerData.cachedStakedBalance || '0')
         const stakingTokens = stakingWei / BigInt(10 ** 18)
         return formatBlocAmount(stakingTokens.toString())
+      }
       case 'time':
         return formatTimeSeconds(Number(playerData.stats?.totalTimeConsumed || 0))
+      case 'tips-sent':
+        return `${playerData.stats?.totalTipsSent || '0'} tips`
+      case 'tips-received':
+        return `${playerData.stats?.totalTipsReceived || '0'} tips`
     }
   }
 

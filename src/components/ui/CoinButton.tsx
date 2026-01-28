@@ -40,7 +40,7 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
   useEffect(() => {
     if (!isConnected || !address) return
 
-    const interval = setInterval(fetchClaimInfo, 60000) // Every minute
+    const interval = setInterval(fetchClaimInfo, 30000) // Every 30 seconds
     return () => clearInterval(interval)
   }, [isConnected, address])
 

@@ -124,6 +124,14 @@ export async function getTimePlayedLeaderboard(limit = 20): Promise<LeaderboardE
   return fetchApi<LeaderboardEntry[]>(`/leaderboards/time-played?limit=${limit}`)
 }
 
+export async function getTipsSentLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
+  return fetchApi<LeaderboardEntry[]>(`/leaderboards/tips-sent?limit=${limit}`)
+}
+
+export async function getTipsReceivedLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
+  return fetchApi<LeaderboardEntry[]>(`/leaderboards/tips-received?limit=${limit}`)
+}
+
 // Game-specific leaderboards
 export interface GameLeaderboardEntry {
   rank: number
