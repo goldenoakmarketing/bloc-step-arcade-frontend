@@ -15,6 +15,7 @@ import { Solitaire, SolitaireMeta } from './Solitaire'
 import { Ping, PingMeta } from './Ping'
 import { DrBloc, DrBlocMeta } from './DrBloc'
 import { AngryBlocs, AngryBlocsMeta } from './AngryBlocs'
+import { Breakout, BreakoutMeta } from './Breakout'
 import { GameProps } from './GameWrapper'
 
 export interface GameMeta {
@@ -45,6 +46,7 @@ export const GAMES: GameRegistration[] = [
   { meta: SolitaireMeta, component: Solitaire },
   { meta: EndlessRunnerMeta, component: EndlessRunner },
   { meta: HextrisMeta, component: Hextris },
+  { meta: BreakoutMeta, component: Breakout },
 ]
 
 // Helper to get game by ID

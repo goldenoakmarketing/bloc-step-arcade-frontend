@@ -35,6 +35,7 @@ const GAME_EMOJIS: Record<string, string> = {
   'endless-runner': '🏃',
   'flappy-bird': '🐦',
   '2048': '🔢',
+  breakout: '🧱',
 }
 
 // Submit score to backend
