@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from 'react'
 import { sdk } from '@farcaster/miniapp-sdk'
-import { useAccount } from 'wagmi'
+import { useAccount, useConnect } from 'wagmi'
 import { linkFarcaster, registerNotificationToken } from '@/lib/api'
 
 interface FarcasterUser {
@@ -53,7 +53,8 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const linkAttemptedRef = useRef(false)
   const notificationAttemptedRef = useRef(false)
-  const { address } = useAccount()
+  const { address, isConnected } = useAccount()
+  const { connect, connectors } = useConnect()
 
   useEffect(() => {
     const initFarcaster = async () => {
@@ -105,6 +106,17 @@ function FarcasterProviderInner({ children }: FarcasterProviderProps) {
 
     initFarcaster()
   }, [])
+
+  // Auto-connect wallet when in Farcaster context
+  useEffect(() => {
+    if (!isInFarcaster || isLoading || isConnected) return
+
+    const farcasterConnector = connectors.find((c: { name: string }) => c.name.toLowerCase().includes('farcaster'))
+    const connector = farcasterConnector || connectors[0]
+    if (connector) {
+      connect({ connector })
+    }
+  }, [isInFarcaster, isLoading, isConnected, connectors, connect])
 
   // Auto-link Farcaster account when wallet is connected
   useEffect(() => {

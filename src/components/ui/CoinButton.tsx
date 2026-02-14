@@ -23,6 +23,7 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
   const [lastFound, setLastFound] = useState<number | null>(null)
   const [claimInfo, setClaimInfo] = useState<ClaimInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const { address, isConnected } = useAccount()
   const { connect, connectors } = useConnect()
@@ -156,6 +157,8 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
         const claimed = data.data?.claimed ?? 0
         console.log('[CoinButton] Claim successful, claimed:', claimed)
         setLastFound(claimed)
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
         if (claimed > 0) {
           onClaim(claimed)
         }
@@ -239,6 +242,15 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
                 CONNECT
               </div>
             </>
+          ) : showSuccess && lastFound !== null ? (
+            <>
+              <div className="text-2xl font-bold text-green-400">
+                +{lastFound}Q
+              </div>
+              <div className="text-[10px] mt-2 tracking-wider text-green-500">
+                FOUND
+              </div>
+            </>
           ) : isOnCooldown && claimInfo?.nextClaimTime ? (
             <>
               {/* Cooldown display */}
@@ -281,18 +293,18 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
       <div className="text-center mt-2 text-xs text-muted">
         {!isConnected ? (
           'Connect wallet'
-        ) : isOnCooldown ? (
-          'Come back later'
         ) : isLoading ? (
           'Claiming...'
         ) : error ? (
           <span className="text-red-400">{error}</span>
-        ) : lastFound !== null ? (
+        ) : showSuccess && lastFound !== null ? (
           lastFound > 0 ? (
             <span className="text-green-400">Found {lastFound} quarter{lastFound > 1 ? 's' : ''}!</span>
           ) : (
             <span className="text-zinc-400">Pool empty - try later</span>
           )
+        ) : isOnCooldown ? (
+          'Come back later'
         ) : claimInfo ? (
           claimInfo.maxClaimable > 0 ? (
             `Up to ${claimInfo.maxClaimable}Q available`
