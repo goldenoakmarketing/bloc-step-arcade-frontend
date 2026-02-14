@@ -200,10 +200,10 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
     }
   }
 
-  const getStreakDisplay = () => {
+  const getActivityDisplay = () => {
     if (!claimInfo) return null
     if (claimInfo.streak === 0) return null
-    return `${claimInfo.streak} day streak`
+    return `${claimInfo.streak} active this week`
   }
 
   return (
@@ -273,10 +273,10 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
                 LOST & FOUND
               </div>
 
-              {/* Streak indicator */}
+              {/* Activity indicator */}
               {claimInfo && claimInfo.streak > 0 && (
                 <div className="text-[9px] mt-1 text-yellow-500">
-                  {claimInfo.streak} day streak
+                  {claimInfo.streak} active this week
                 </div>
               )}
             </>
@@ -301,7 +301,7 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
           lastFound > 0 ? (
             <span className="text-green-400">Found {lastFound} quarter{lastFound > 1 ? 's' : ''}!</span>
           ) : (
-            <span className="text-zinc-400">Pool empty - try later</span>
+            <span className="text-zinc-400">No quarters right now</span>
           )
         ) : isOnCooldown ? (
           'Come back later'
@@ -309,7 +309,7 @@ export function CoinButton({ onClaim }: CoinButtonProps) {
           claimInfo.maxClaimable > 0 ? (
             `Up to ${claimInfo.maxClaimable}Q available`
           ) : (
-            'Check the pool'
+            'Play or donate to claim'
           )
         ) : (
           'Try your luck'
