@@ -98,6 +98,45 @@ export default function PlayPage() {
     }
   }, [isConnected, quarterBalance, timeRemaining, sendTransactionAsync, addTime, refetchAll, resetSend])
 
+  // Buy a credit for feature games - transfers BLOC but does NOT start the arcade timer
+  const handleBuyCredit = useCallback(async (): Promise<'started' | 'has-time' | 'failed'> => {
+    if (!isConnected) return 'failed'
+    if (quarterBalance < 1) return 'failed'
+
+    try {
+      const data = encodeFunctionData({
+        abi: blocTokenAbi,
+        functionName: 'transfer',
+        args: [contracts.arcadeVault, QUARTER_AMOUNT],
+      })
+
+      const hash = await sendTransactionAsync({
+        to: contracts.blocToken,
+        data,
+      })
+
+      setPendingTxHash(hash)
+      const receipt = await waitForTransaction(hash)
+
+      if (receipt.status === 'success') {
+        // Do NOT call addTime() - feature games have no timer
+        refetchAll()
+        resetSend()
+        setPendingTxHash(undefined)
+        return 'started'
+      } else {
+        resetSend()
+        setPendingTxHash(undefined)
+        return 'failed'
+      }
+    } catch (error) {
+      console.error('Insert credit failed:', error)
+      resetSend()
+      setPendingTxHash(undefined)
+      return 'failed'
+    }
+  }, [isConnected, quarterBalance, sendTransactionAsync, refetchAll, resetSend])
+
   // Simple transaction wait helper
   async function waitForTransaction(hash: `0x${string}`): Promise<{ status: 'success' | 'reverted' }> {
     // Poll for receipt
@@ -148,8 +187,7 @@ export default function PlayPage() {
           onExit={() => setSelectedGame(null)}
           creditCost={game.meta.creditCost || 1}
           quarterBalance={quarterBalance}
-          timeRemaining={timeRemaining}
-          onBuyTime={handleBuyTime}
+          onBuyCredit={handleBuyCredit}
           isPurchasing={isPurchasing}
         >
           <GameComponent onScore={() => {}} onGameOver={() => {}} isPaused={false} timeLeft={0} />

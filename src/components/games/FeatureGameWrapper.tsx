@@ -13,8 +13,7 @@ interface FeatureGameWrapperProps {
   onExit: () => void
   creditCost: number
   quarterBalance: number
-  timeRemaining: number
-  onBuyTime: () => Promise<'started' | 'has-time' | 'failed'>
+  onBuyCredit: () => Promise<'started' | 'has-time' | 'failed'>
   isPurchasing?: boolean
 }
 
@@ -26,8 +25,7 @@ export function FeatureGameWrapper({
   onExit,
   creditCost,
   quarterBalance,
-  timeRemaining,
-  onBuyTime,
+  onBuyCredit,
   isPurchasing = false,
 }: FeatureGameWrapperProps) {
   const { address } = useAccount()
@@ -36,10 +34,10 @@ export function FeatureGameWrapper({
   const playStartTimeRef = useRef<number>(0)
 
   const startGame = async () => {
-    // Feature games always require a credit, even if timer has time
+    // Feature games always require a credit
     setIsInsertingQuarter(true)
     try {
-      const result = await onBuyTime()
+      const result = await onBuyCredit()
       if (result === 'failed') {
         setIsInsertingQuarter(false)
         return
