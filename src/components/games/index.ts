@@ -16,6 +16,7 @@ import { Ping, PingMeta } from './Ping'
 import { DrBloc, DrBlocMeta } from './DrBloc'
 import { AngryBlocs, AngryBlocsMeta } from './AngryBlocs'
 import { Breakout, BreakoutMeta } from './Breakout'
+import { OnchainTrail, OnchainTrailMeta } from './OnchainTrail'
 import { GameProps } from './GameWrapper'
 
 export interface GameMeta {
@@ -26,6 +27,10 @@ export interface GameMeta {
   color: string
   credit?: string
   license?: string
+  isFeature?: boolean
+  creditCost?: number
+  noTimer?: boolean
+  fullScreen?: boolean
 }
 
 export interface GameRegistration {
@@ -47,6 +52,7 @@ export const GAMES: GameRegistration[] = [
   { meta: EndlessRunnerMeta, component: EndlessRunner },
   { meta: HextrisMeta, component: Hextris },
   { meta: BreakoutMeta, component: Breakout },
+  { meta: OnchainTrailMeta, component: OnchainTrail },
 ]
 
 // Helper to get game by ID
@@ -54,6 +60,7 @@ export function getGameById(id: string): GameRegistration | undefined {
   return GAMES.find(g => g.meta.id === id)
 }
 
-// Re-export wrapper
+// Re-export wrappers
 export { GameWrapper } from './GameWrapper'
+export { FeatureGameWrapper } from './FeatureGameWrapper'
 export type { GameProps } from './GameWrapper'

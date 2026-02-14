@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Onchain Trail | Bloc Step Arcade</title>
+    <meta name="title" content="Onchain Trail | Bloc Step Arcade" />
+    <meta name="description" content="Lead your crypto startup from garage to WAGMI Valley. A survival game for the blockchain age. Will you survive the journey?" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://blocstep.app/play/onchain-trail" />
+    <meta property="og:title" content="Onchain Trail | Bloc Step Arcade" />
+    <meta property="og:description" content="Lead your crypto startup from garage to WAGMI Valley. A survival game for the blockchain age." />
+    <meta property="og:image" content="https://blocstep.app/games/onchain-trail/assets/images/promo_hero.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://blocstep.app/play/onchain-trail" />
+    <meta property="twitter:title" content="Onchain Trail | Bloc Step Arcade" />
+    <meta property="twitter:description" content="Lead your crypto startup from garage to WAGMI Valley. A survival game for the blockchain age." />
+    <meta property="twitter:image" content="https://blocstep.app/games/onchain-trail/assets/images/promo_hero.jpg" />
+    
+    <!-- Farcaster Frame Meta Tags -->
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="https://blocstep.app/games/onchain-trail/assets/images/promo_hero.jpg" />
+    <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+    <meta property="fc:frame:button:1" content="Play Now" />
+    <meta property="fc:frame:button:1:action" content="link" />
+    <meta property="fc:frame:button:1:target" content="https://blocstep.app/play/onchain-trail" />
+    <meta property="fc:frame:button:2" content="View Leaderboard" />
+    <meta property="fc:frame:button:2:action" content="link" />
+    <meta property="fc:frame:button:2:target" content="https://blocstep.app/leaderboard/onchain-trail" />
+    
+    <!-- Bloc Step App Link -->
+    <meta property="al:ios:url" content="blocstep://play/onchain-trail" />
+    <meta property="al:ios:app_store_id" content="YOUR_APP_STORE_ID" />
+    <meta property="al:ios:app_name" content="Bloc Step Arcade" />
+    <meta property="al:android:url" content="blocstep://play/onchain-trail" />
+    <meta property="al:android:package" content="app.blocstep.arcade" />
+    <meta property="al:android:app_name" content="Bloc Step Arcade" />
+    <meta property="al:web:url" content="https://blocstep.app/play/onchain-trail" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Prevent zoom on iOS -->
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        touch-action: manipulation;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+      /* Prevent pull-to-refresh on mobile */
+      body {
+        overscroll-behavior: none;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-DLQ61e7t.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BgoIsol8.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Handle deep links -->
+    <script>
+      // Parse URL params for deep link handling
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get('ref');
+        const score = params.get('score');
+        const ending = params.get('ending');
+        
+        // Store referral info
+        if (ref) {
+          sessionStorage.setItem('onchain_trail_ref', ref);
+        }
+        
+        // Store result view info (for showing someone else's result)
+        if (score && ending) {
+          sessionStorage.setItem('onchain_trail_view_result', JSON.stringify({
+            score: parseInt(score),
+            ending: ending,
+          }));
+        }
+      })();
+    </script>
+  </body>
+</html>

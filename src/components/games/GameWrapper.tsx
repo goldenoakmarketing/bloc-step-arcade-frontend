@@ -37,6 +37,7 @@ const GAME_EMOJIS: Record<string, string> = {
   'flappy-bird': '🐦',
   '2048': '🔢',
   breakout: '🧱',
+  'onchain-trail': '🌄',
 }
 
 // Submit score to backend with Farcaster data

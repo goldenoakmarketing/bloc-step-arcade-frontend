@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useCallback } from 'react'
 import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi'
 import { encodeFunctionData } from 'viem'
-import { GAMES, GameWrapper, getGameById } from '@/components/games'
+import { GAMES, GameWrapper, FeatureGameWrapper, getGameById } from '@/components/games'
 import { useQuarters } from '@/hooks/useQuarters'
 import { useArcadeTimer } from '@/contexts/ArcadeTimerContext'
 import { contracts, blocTokenAbi } from '@/config/contracts'
@@ -138,6 +138,25 @@ export default function PlayPage() {
 
     const GameComponent = game.component
 
+    // Feature games use a different wrapper (full screen, no timer, credit-gated)
+    if (game.meta.isFeature) {
+      return (
+        <FeatureGameWrapper
+          gameId={game.meta.id}
+          gameName={game.meta.name}
+          gameIcon={game.meta.icon}
+          onExit={() => setSelectedGame(null)}
+          creditCost={game.meta.creditCost || 1}
+          quarterBalance={quarterBalance}
+          timeRemaining={timeRemaining}
+          onBuyTime={handleBuyTime}
+          isPurchasing={isPurchasing}
+        >
+          <GameComponent onScore={() => {}} onGameOver={() => {}} isPaused={false} timeLeft={0} />
+        </FeatureGameWrapper>
+      )
+    }
+
     return (
       <GameWrapper
         gameId={game.meta.id}
@@ -178,9 +197,42 @@ export default function PlayPage() {
           )}
         </div>
 
+        {/* Feature Games */}
+        {GAMES.filter(({ meta }) => meta.isFeature).length > 0 && (
+          <div className="mb-6">
+            {GAMES.filter(({ meta }) => meta.isFeature).map(({ meta }) => (
+              <button
+                key={meta.id}
+                onClick={() => setSelectedGame(meta.id)}
+                className="card-glow w-full text-left p-5 hover:scale-[1.01] transition-transform border border-amber-500/30"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`
+                    w-16 h-16 rounded-xl shrink-0
+                    bg-gradient-to-br ${meta.color}
+                    flex items-center justify-center text-3xl
+                  `}>
+                    {meta.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-lg">{meta.name}</h3>
+                      <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/50 rounded-full text-xs font-bold">
+                        Featured
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted">{meta.description}</p>
+                    <p className="text-xs text-amber-400/70 mt-1">{meta.creditCost || 1} credit per play</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Game Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {GAMES.map(({ meta }) => (
+          {GAMES.filter(({ meta }) => !meta.isFeature).map(({ meta }) => (
             <button
               key={meta.id}
               onClick={() => setSelectedGame(meta.id)}
