@@ -202,7 +202,7 @@ function VictoryShareCard({ gameId, score, highScore, isNewHighScore, leaderboar
             </div>
           </div>
 
-          <div className="text-center text-purple-400 text-xs">blocstep.arcade</div>
+          <div className="text-center text-purple-400 text-xs">{APP_URL}</div>
         </div>
 
         {/* Actions */}
@@ -255,7 +255,7 @@ function OutcomeShareCard({ imageUrl, message, onClose, isInFarcaster }: Outcome
           <img src={imageUrl} alt="" className="w-full" />
           <div className="bg-black p-4 text-center">
             <p className="text-white text-lg font-bold">{message}</p>
-            <p className="text-gray-500 text-xs mt-2">blocstep.arcade</p>
+            <p className="text-purple-400 text-xs mt-2">{APP_URL}</p>
           </div>
         </div>
 
