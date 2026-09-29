@@ -10,11 +10,8 @@ dist/
 build/
 
 # Environment
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
 # IDE
 .vscode/
@@ -37,6 +34,7 @@ next-env.d.ts
 
 # Vercel
 .vercel
+.netlify/
 
 # Testing
 coverage/
