@@ -424,7 +424,7 @@ export function Ping({ onScore, onGameOver, isPaused }: GameProps) {
       </div>
 
       <p className="text-muted text-sm mt-4">
-        Multi-ball chaos! Don't let them past you!
+        Multi-ball chaos! Don&apos;t let them past you!
       </p>
 
       <p className="text-zinc-600 text-xs mt-2">

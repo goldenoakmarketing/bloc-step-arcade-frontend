@@ -260,7 +260,7 @@ export function Snake({ onScore, onGameOver, isPaused }: GameProps) {
       </div>
 
       <p className="text-muted text-sm mt-4">
-        Eat food to grow. Don't hit walls or yourself!
+        Eat food to grow. Don&apos;t hit walls or yourself!
       </p>
 
       <p className="text-zinc-600 text-xs mt-2">

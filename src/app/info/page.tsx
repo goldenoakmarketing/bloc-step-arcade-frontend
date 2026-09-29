@@ -98,7 +98,7 @@ export default function InfoPage() {
           </div>
           <p className="text-xs text-muted mt-3">
             When time is under 2 minutes and you have quarters available,
-            you'll see a hint to double-tap for more time.
+            you&apos;ll see a hint to double-tap for more time.
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function InfoPage() {
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
             Quarters flow through the ecosystem. They get lost, they get found.
-            It's the circle of arcade life.
+            It&apos;s the circle of arcade life.
           </p>
           <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 space-y-2 text-sm">
             <div className="flex justify-between">
@@ -127,7 +127,7 @@ export default function InfoPage() {
           </div>
           <p className="text-xs text-muted mt-3">
             Players can check the Lost & Found once per day to see if any quarters are waiting.
-            How many you find depends on luck and the pool's current state.
+            How many you find depends on luck and the pool&apos;s current state.
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default function InfoPage() {
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
             The Lost & Found pool has a cap of 2500 quarters. When quarters overflow,
-            they don't disappear — they <span className="text-white">automatically</span> feed the ecosystem.
+            they don&apos;t disappear — they <span className="text-white">automatically</span> feed the ecosystem.
           </p>
           <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 text-sm">
             <div className="text-center mb-2">
@@ -201,7 +201,7 @@ export default function InfoPage() {
           </div>
           <p className="text-sm text-muted leading-relaxed">
             Staking rewards come from <span className="text-white">real usage</span>,
-            not from token inflation or ponzi mechanics. No usage = no rewards. It's that simple.
+            not from token inflation or ponzi mechanics. No usage = no rewards. It&apos;s that simple.
           </p>
         </div>
 
@@ -211,7 +211,7 @@ export default function InfoPage() {
             <span>💬</span> Tipping & Social
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
-            $BLOC isn't just arcade currency — it's a <span className="text-white">social token</span> built for community.
+            $BLOC isn&apos;t just arcade currency — it&apos;s a <span className="text-white">social token</span> built for community.
             Tip players, support creators, show love.
           </p>
           <div className="bg-black/40 backdrop-blur-sm rounded-lg p-3 mb-3">
@@ -255,15 +255,15 @@ export default function InfoPage() {
             <span>🌍</span> The Bigger Picture
           </h2>
           <p className="text-sm text-muted leading-relaxed mb-3">
-            Bloc Step isn't just an app. It's the foundation for a <span className="text-white">real-world economy</span> being
-            built on Base. The quarters, the games, the Lost & Found, the tips — they're all pieces of something bigger.
+            Bloc Step isn&apos;t just an app. It&apos;s the foundation for a <span className="text-white">real-world economy</span> being
+            built on Base. The quarters, the games, the Lost & Found, the tips — they&apos;re all pieces of something bigger.
           </p>
           <p className="text-sm text-muted leading-relaxed mb-3">
             $BLOC is <span className="text-white">the coin that connects players</span>. Not speculation — participation.
             Quarters circulate, tips flow, community grows. Real usage drives real rewards.
           </p>
           <p className="text-sm text-muted leading-relaxed">
-            Play games. Tip creators. Support each other. That's the future we're building, one bloc step at a time.
+            Play games. Tip creators. Support each other. That&apos;s the future we&apos;re building, one bloc step at a time.
           </p>
         </div>
 
@@ -293,7 +293,7 @@ export default function InfoPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-zinc-500">6.</span>
-              <span>We're building for <span className="text-white">community</span>, not speculators</span>
+              <span>We&apos;re building for <span className="text-white">community</span>, not speculators</span>
             </li>
           </ul>
         </div>
